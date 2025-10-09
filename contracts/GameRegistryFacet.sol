@@ -16,15 +16,24 @@ import './IGameRegistry.sol';
  */
 contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegistry {
 
+    // ============ Errors ============
+    
+    error GameRegistry__InvalidMintAddress();
+    error GameRegistry__EmptyURI();
+    error GameRegistry__AlreadyInitialized();
+    error GameRegistry__TokenDoesNotExist();
+    error GameRegistry__NotTokenOwner();
+    error GameRegistry__URICannotBeEmpty();
+
     // ============ Modifiers ============
 
     modifier onlyValidToken(uint256 tokenId) {
-        require(_tokenExists(tokenId), "GameRegistry: Token does not exist");
+        if (!_tokenExists(tokenId)) revert GameRegistry__TokenDoesNotExist();
         _;
     }
 
     modifier onlyTokenOwner(uint256 tokenId) {
-        require(this.ownerOf(tokenId) == msg.sender, "GameRegistry: Not token owner");
+        if (this.ownerOf(tokenId) != msg.sender) revert GameRegistry__NotTokenOwner();
         _;
     }
 
@@ -37,7 +46,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
      */
     function initialize(string memory _name, string memory _symbol) external override onlyOwner {
         GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
-        require(ds.nextTokenId == 0, "GameRegistry: Already initialized");
+        if (ds.nextTokenId != 0) revert GameRegistry__AlreadyInitialized();
         
         // Set name and symbol in ERC721Storage
         ERC721Storage.layout().name = _name;
@@ -56,8 +65,8 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
         string memory gameURI
     ) external override onlyOwner returns (uint256) {
         GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
-        require(to != address(0), "GameRegistry: Mint to zero address");
-        require(bytes(gameURI).length > 0, "GameRegistry: Game URI cannot be empty");
+        if (to == address(0)) revert GameRegistry__InvalidMintAddress();
+        if (bytes(gameURI).length == 0) revert GameRegistry__EmptyURI();
 
         uint256 tokenId = ds.nextTokenId;
         ds.nextTokenId++;
@@ -80,7 +89,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
         onlyTokenOwner(tokenId) 
         onlyValidToken(tokenId) 
     {
-        require(bytes(newURI).length > 0, "GameRegistry: URI cannot be empty");
+        if (bytes(newURI).length == 0) revert GameRegistry__URICannotBeEmpty();
         
         GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
         ds.gameURIs[tokenId] = newURI;
@@ -96,7 +105,7 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
      * @return The token URI
      */
     function tokenURI(uint256 tokenId) external view override(IERC721Metadata, NonFungibleTokenMetadata) returns (string memory) {
-        require(_tokenExists(tokenId), "GameRegistry: URI query for nonexistent token");
+        if (!_tokenExists(tokenId)) revert GameRegistry__TokenDoesNotExist();
         return GameRegistryStorage.layout().gameURIs[tokenId];
     }
 
@@ -123,45 +132,4 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, SafeOwnable, IGameRegi
         }
     }
 
-    // ============ Override Functions ============
-
-    /**
-     * @dev Override _handleApproveMessageValue to prevent payable approvals
-     */
-    function _handleApproveMessageValue(
-        address operator,
-        uint256 tokenId,
-        uint256 value
-    ) internal override {
-        if (value > 0) {
-            revert("GameRegistry: Payable approve not supported");
-        }
-        super._handleApproveMessageValue(operator, tokenId, value);
-    }
-
-    /**
-     * @dev Override _handleTransferMessageValue to prevent payable transfers
-     */
-    function _handleTransferMessageValue(
-        address from,
-        address to,
-        uint256 tokenId,
-        uint256 value
-    ) internal override {
-        if (value > 0) {
-            revert("GameRegistry: Payable transfer not supported");
-        }
-        super._handleTransferMessageValue(from, to, tokenId, value);
-    }
-
-    /**
-     * @dev Override _beforeTokenTransfer for custom logic
-     */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal override {
-        super._beforeTokenTransfer(from, to, tokenId);
-    }
 }
