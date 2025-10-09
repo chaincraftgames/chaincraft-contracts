@@ -59,6 +59,11 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, Operable, IGameRegistr
         ERC721Storage.layout().name = _name;
         ERC721Storage.layout().symbol = _symbol;
         ds.nextTokenId = 1; // Start token IDs from 1
+        
+        // Register ERC721 interface support
+        _setSupportsInterface(0x80ac58cd, true); // ERC721
+        _setSupportsInterface(0x5b5e139f, true); // ERC721Metadata
+        _setSupportsInterface(0x780e9d63, true); // ERC721Enumerable
     }
 
     /**
@@ -91,10 +96,10 @@ contract GameRegistryFacet is SolidstateNonFungibleToken, Operable, IGameRegistr
      * @param newURI New URI for the game
      */
     function updateGameURI(uint256 tokenId, string memory newURI) 
-        external 
+        external
         override
-        onlyTokenOwner(tokenId) 
-        onlyValidToken(tokenId) 
+        onlyTokenOwner(tokenId)
+        onlyValidToken(tokenId)
     {
         if (bytes(newURI).length == 0) revert GameRegistry__URICannotBeEmpty();
         
