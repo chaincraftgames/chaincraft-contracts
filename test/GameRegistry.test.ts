@@ -19,7 +19,7 @@ describe("GameRegistry", () => {
     [deployer, user1, user2] = walletClients;
 
     // Deploy the Diamond contract
-    diamond = await viem.deployContract("ChainCraftDiamond", []);
+    diamond = await viem.deployContract("CCGRDiamond", []);
 
     // Deploy GameRegistryFacet
     const gameRegistryFacet = await viem.deployContract(
@@ -32,7 +32,7 @@ describe("GameRegistry", () => {
 
     // Get selectors that are already added by the diamond (from SolidstateDiamondProxy)
     const diamondAbi =
-      require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+      require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
     const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
     // Filter out selectors that are already added by the diamond

@@ -2,6 +2,7 @@ import type { HardhatUserConfig } from "hardhat/config";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import { configVariable } from "hardhat/config";
+import "dotenv/config";
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxViemPlugin],
@@ -26,15 +27,23 @@ const config: HardhatUserConfig = {
       type: "edr-simulated",
       chainType: "l1",
     },
-    hardhatOp: {
-      type: "edr-simulated",
-      chainType: "op",
-    },
-    sepolia: {
+    // hardhatOp: {
+    //   type: "edr-simulated",
+    //   chainType: "op",
+    // },
+    // sepolia: {
+    //   type: "http",
+    //   chainType: "l1",
+    //   url: configVariable("SEPOLIA_RPC_URL"),
+    //   accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+    // },
+    sankoTestnet: {
       type: "http",
       chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      url: "https://sanko-arb-sepolia.rpc.caldera.xyz/http",
+      chainId: 1992,
+      // accounts: [configVariable("PRIVATE_KEY")],
+      accounts: [process.env.PRIVATE_KEY!],
     },
   },
 };

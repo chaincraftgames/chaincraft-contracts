@@ -24,8 +24,8 @@ function getFunctionSelectors(abi: any[]): string[] {
 
 export default buildModule("ChainCraft", (m) => {
   // Deploy the Diamond contract first
-  const diamond = m.contract("ChainCraftDiamond", [], {
-    id: "ChainCraftDiamond",
+  const diamond = m.contract("CCGRDiamond", [], {
+    id: "CCGRDiamond",
   });
 
   // Deploy the GameRegistryFacet
@@ -37,7 +37,7 @@ export default buildModule("ChainCraft", (m) => {
   const gameRegistryAbi =
     require("../../artifacts/contracts/facets/GameRegistryFacet.sol/GameRegistryFacet.json").abi;
   const diamondAbi =
-    require("../../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+    require("../../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
 
   // Get selectors for GameRegistryFacet
   const allSelectors = getFunctionSelectors(gameRegistryAbi);

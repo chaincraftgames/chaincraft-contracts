@@ -18,7 +18,7 @@ describe("SimpleMockFacet Diamond Integration", () => {
     [deployer] = walletClients;
 
     // Deploy diamond with GameRegistryFacet (this works)
-    diamond = await viem.deployContract("ChainCraftDiamond", []);
+    diamond = await viem.deployContract("CCGRDiamond", []);
     const gameRegistryFacet = await viem.deployContract(
       "GameRegistryFacet",
       []
@@ -26,7 +26,7 @@ describe("SimpleMockFacet Diamond Integration", () => {
 
     const allSelectors = getFunctionSelectors(gameRegistryFacet.abi);
     const diamondAbi =
-      require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+      require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
     const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
     const gameRegistrySelectors = allSelectors.filter(
