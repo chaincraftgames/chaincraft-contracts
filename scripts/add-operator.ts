@@ -7,11 +7,13 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sankoTestnet } from "../utils/chains.js";
+import fs from "fs";
+import path from "path";
 
 const require = createRequire(import.meta.url);
 
-// CCERC721Facet ABI
-const CCERC721_FACET_ABI = [
+// OperableFacet ABI
+const OPERABLE_FACET_ABI = [
   {
     type: "function",
     name: "addOperator",
@@ -35,11 +37,43 @@ const CCERC721_FACET_ABI = [
   },
 ] as const;
 
+function getDeployedAddress(chainId: number): string {
+  try {
+    const deploymentPath = path.join(
+      process.cwd(),
+      "ignition",
+      "deployments",
+      `chain-${chainId}`,
+      "deployed_addresses.json"
+    );
+
+    if (!fs.existsSync(deploymentPath)) {
+      throw new Error(
+        `No deployment found for chain ${chainId}. Please deploy the contract first.`
+      );
+    }
+
+    const deployedAddresses = JSON.parse(
+      fs.readFileSync(deploymentPath, "utf-8")
+    );
+
+    const diamondAddress = deployedAddresses["ChainCraft#ChainCraftDiamond"];
+
+    if (!diamondAddress) {
+      throw new Error(
+        `ChainCraftDiamond address not found in deployment file for chain ${chainId}`
+      );
+    }
+
+    return diamondAddress;
+  } catch (error) {
+    console.error("❌ Error reading deployment address:", error);
+    throw error;
+  }
+}
+
 async function main() {
   console.log("🔧 Adding operator to ChainCraftDiamond contract...");
-
-  // Contract address (deployed on Sanko testnet)
-  const contractAddress = "0x7E59B3706CbebC93f3250Ed56BAf8153f1e978aa";
 
   // Get the operator address from environment variable
   const operatorAddress = process.env.OPERATOR_ADDR;
@@ -57,10 +91,13 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`📋 Contract Address: ${contractAddress}`);
-  console.log(`➕ Adding Operator: ${operatorAddress}`);
-
   try {
+    // Get deployed contract address for the chain
+    const contractAddress = getDeployedAddress(sankoTestnet.id);
+    console.log(`📋 Contract Address: ${contractAddress}`);
+    console.log(`🔗 Chain: ${sankoTestnet.name} (${sankoTestnet.id})`);
+    console.log(`➕ Adding Operator: ${operatorAddress}`);
+
     // Create account from private key
     const account = privateKeyToAccount(
       process.env.PRIVATE_KEY as `0x${string}`
@@ -82,7 +119,7 @@ async function main() {
     // Get contract instance
     const contract = getContract({
       address: contractAddress as `0x${string}`,
-      abi: CCERC721_FACET_ABI,
+      abi: OPERABLE_FACET_ABI,
       client: { public: publicClient, wallet: walletClient },
     });
 

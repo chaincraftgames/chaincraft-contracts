@@ -1,12 +1,13 @@
 import { createRequire } from "module";
 import { createPublicClient, http, getContract } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
 import { sankoTestnet } from "../utils/chains.js";
+import fs from "fs";
+import path from "path";
 
 const require = createRequire(import.meta.url);
 
-// CCERC721Facet ABI
-const CCERC721_FACET_ABI = [
+// Combined ABI for OperableFacet and GameRegistryFacet
+const DIAMOND_ABI = [
   {
     type: "function",
     name: "getOperators",
@@ -28,17 +29,66 @@ const CCERC721_FACET_ABI = [
     outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
     stateMutability: "view",
   },
+  {
+    type: "function",
+    name: "name",
+    inputs: [],
+    outputs: [{ name: "", type: "string", internalType: "string" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "symbol",
+    inputs: [],
+    outputs: [{ name: "", type: "string", internalType: "string" }],
+    stateMutability: "view",
+  },
 ] as const;
+
+function getDeployedAddress(chainId: number): string {
+  try {
+    const deploymentPath = path.join(
+      process.cwd(),
+      "ignition",
+      "deployments",
+      `chain-${chainId}`,
+      "deployed_addresses.json"
+    );
+
+    if (!fs.existsSync(deploymentPath)) {
+      throw new Error(
+        `No deployment found for chain ${chainId}. Please deploy the contract first.`
+      );
+    }
+
+    const deployedAddresses = JSON.parse(
+      fs.readFileSync(deploymentPath, "utf-8")
+    );
+
+    const diamondAddress = deployedAddresses["ChainCraft#ChainCraftDiamond"];
+
+    if (!diamondAddress) {
+      throw new Error(
+        `ChainCraftDiamond address not found in deployment file for chain ${chainId}`
+      );
+    }
+
+    return diamondAddress;
+  } catch (error) {
+    console.error("❌ Error reading deployment address:", error);
+    throw error;
+  }
+}
 
 async function main() {
   console.log("📋 Listing operators for ChainCraftDiamond contract...");
 
-  // Contract address (deployed on Sanko testnet)
-  const contractAddress = "0x7E59B3706CbebC93f3250Ed56BAf8153f1e978aa";
-
-  console.log(`📋 Contract Address: ${contractAddress}`);
-
   try {
+    // Get deployed contract address for the chain
+    const contractAddress = getDeployedAddress(sankoTestnet.id);
+    console.log(`📋 Contract Address: ${contractAddress}`);
+    console.log(`🔗 Chain: ${sankoTestnet.name} (${sankoTestnet.id})`);
+
     // Create public client
     const publicClient = createPublicClient({
       chain: sankoTestnet,
@@ -48,12 +98,23 @@ async function main() {
     // Get contract instance
     const contract = getContract({
       address: contractAddress as `0x${string}`,
-      abi: CCERC721_FACET_ABI,
+      abi: DIAMOND_ABI,
       client: publicClient,
     });
 
+    // Get contract info
+    console.log("\n🔍 Fetching contract information...");
+    const name = await contract.read.name();
+    const symbol = await contract.read.symbol();
+    console.log(`📛 Token Name: ${name}`);
+    console.log(`🔤 Token Symbol: ${symbol}`);
+
+    // Get contract owner
+    const owner = await contract.read.owner();
+    console.log(`👑 Contract Owner: ${owner}`);
+
     // Get all operators
-    console.log("🔍 Fetching operators...");
+    console.log("\n🔍 Fetching operators...");
     const operators = await contract.read.getOperators();
 
     console.log(`📊 Total operators: ${operators.length}`);
@@ -67,13 +128,9 @@ async function main() {
       });
     }
 
-    // Get contract owner
-    const owner = await contract.read.owner();
-    console.log(`👑 Contract Owner: ${owner}`);
-
     // Get total games
     const totalGames = await contract.read.totalGames();
-    console.log(`🎮 Total Games: ${totalGames}`);
+    console.log(`\n🎮 Total Games Published: ${totalGames}`);
   } catch (error) {
     console.error("❌ Error listing operators:", error);
     process.exit(1);

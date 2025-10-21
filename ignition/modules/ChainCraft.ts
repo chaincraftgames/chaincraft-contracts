@@ -10,7 +10,7 @@ enum FacetCutAction {
   Remove,
 }
 
-// Helper function to extract function selectors from ABI (like in your example)
+// Helper function to extract function selectors from ABI
 function getFunctionSelectors(abi: any[]): string[] {
   return abi
     .filter((item) => item.type === "function")
@@ -23,43 +23,72 @@ function getFunctionSelectors(abi: any[]): string[] {
 }
 
 export default buildModule("ChainCraft", (m) => {
-  // Deploy the Diamond contract first
+  // ============ Deploy Diamond ============
   const diamond = m.contract("ChainCraftDiamond", [], {
     id: "ChainCraftDiamond",
   });
 
-  // Deploy the CCERC721Facet
-  const ccERC721Facet = m.contract("CCERC721Facet", [], {
-    id: "CCERC721Facet",
+  // ============ Deploy Facets ============
+
+  // Deploy OperableFacet
+  const operableFacet = m.contract("OperableFacet", [], {
+    id: "OperableFacet",
   });
 
-  // Load ABIs for both contracts
-  const ccERC721FacetAbi =
-    require("../../artifacts/contracts/facets/CCERC721Facet.sol/CCERC721Facet.json").abi;
+  // Deploy GameRegistryFacet
+  const gameRegistryFacet = m.contract("GameRegistryFacet", [], {
+    id: "GameRegistryFacet",
+  });
+
+  // ============ Load ABIs ============
+
+  const operableFacetAbi =
+    require("../../artifacts/contracts/facets/OperableFacet/OperableFacet.sol/OperableFacet.json").abi;
+
+  const gameRegistryFacetAbi =
+    require("../../artifacts/contracts/facets/GameRegistryFacet/GameRegistryFacet.sol/GameRegistryFacet.json").abi;
+
   const diamondAbi =
     require("../../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
 
-  // Get selectors for CCERC721Facet
-  const allSelectors = getFunctionSelectors(ccERC721FacetAbi);
+  // ============ Get Function Selectors ============
 
-  // Get selectors that are already added by the diamond (from SolidstateDiamondProxy)
+  // Get selectors for OperableFacet
+  const operableFacetSelectors = getFunctionSelectors(operableFacetAbi);
+
+  // Get selectors for GameRegistryFacet
+  const gameRegistryFacetSelectors = getFunctionSelectors(gameRegistryFacetAbi);
+
+  // Get selectors already added by the diamond (from SafeOwnable, etc.)
   const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
+  // ============ Filter Out Duplicate Selectors ============
+
   // Filter out selectors that are already added by the diamond
-  const ccERC721FacetSelectors = allSelectors.filter(
+  const operableFacetSelectorsFiltered = operableFacetSelectors.filter(
     (selector) => !alreadyAddedSelectors.includes(selector)
   );
 
-  // Add CCERC721Facet to the diamond
+  const gameRegistryFacetSelectorsFiltered = gameRegistryFacetSelectors.filter(
+    (selector) => !alreadyAddedSelectors.includes(selector)
+  );
+
+  // ============ Diamond Cut - Add Facets ============
+
   m.call(
     diamond,
     "diamondCut",
     [
       [
         {
-          target: ccERC721Facet,
+          target: operableFacet,
           action: FacetCutAction.Add,
-          selectors: ccERC721FacetSelectors,
+          selectors: operableFacetSelectorsFiltered,
+        },
+        {
+          target: gameRegistryFacet,
+          action: FacetCutAction.Add,
+          selectors: gameRegistryFacetSelectorsFiltered,
         },
       ],
       "0x0000000000000000000000000000000000000000",
@@ -68,24 +97,38 @@ export default buildModule("ChainCraft", (m) => {
     { id: "DiamondCut" }
   );
 
-  // Get CCERC721Facet interface at diamond address for initialization
-  const ccERC721FacetInterface = m.contractAt("CCERC721Facet", diamond, {
-    id: "CCERC721FacetInterface",
+  // ============ Get Facet Interfaces at Diamond Address ============
+
+  const operableFacetInterface = m.contractAt("OperableFacet", diamond, {
+    id: "OperableFacetInterface",
   });
 
-  // Initialize the CCERC721Facet
+  const gameRegistryFacetInterface = m.contractAt(
+    "GameRegistryFacet",
+    diamond,
+    {
+      id: "GameRegistryFacetInterface",
+    }
+  );
+
+  // ============ Initialize GameRegistry ============
+
   m.call(
-    ccERC721FacetInterface,
+    gameRegistryFacetInterface,
     "initialize",
-    ["ChainCraft Game Registry", "CCGR"],
+    ["ChainCraft Games", "CCG"],
     {
       id: "Initialize",
     }
   );
 
+  // ============ Return Deployed Contracts ============
+
   return {
     diamond,
-    ccERC721Facet,
-    ccERC721FacetInterface,
+    operableFacet,
+    operableFacetInterface,
+    gameRegistryFacet,
+    gameRegistryFacetInterface,
   };
 });
