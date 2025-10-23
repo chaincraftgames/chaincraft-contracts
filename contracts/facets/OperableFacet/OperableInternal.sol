@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { EnumerableSet } from '@solidstate/contracts/data/EnumerableSet.sol';
-import './OperableStorage.sol';
+import { OperableStorage } from './OperableStorage.sol';
 
 /// @title OperableInternal
 /// @dev Internal functions for operator management
@@ -20,13 +20,21 @@ abstract contract OperableInternal {
     /// @param operator Address of the removed operator
     event OperatorRemoved(address indexed operator);
 
+    // ============ Errors ============
+
+    error Operable__ZeroAddress();
+    error Operable__AlreadyOperator();
+    error Operable__NotOperator();
+
     // ============ Internal Functions ============
 
     /// @notice Add an operator
     /// @dev Internal function to add an operator to the set
     /// @param operator Address to be added as an operator
     function _addOperator(address operator) internal {
-        OperableStorage.layout().operators.add(operator);
+        if (operator == address(0)) revert Operable__ZeroAddress();
+        bool added = OperableStorage.layout().operators.add(operator);
+        if (!added) revert Operable__AlreadyOperator();
         emit OperatorAdded(operator);
     }
 
@@ -34,7 +42,8 @@ abstract contract OperableInternal {
     /// @dev Internal function to remove an operator from the set
     /// @param operator Address to be removed from operators
     function _removeOperator(address operator) internal {
-        OperableStorage.layout().operators.remove(operator);
+        bool removed = OperableStorage.layout().operators.remove(operator);
+        if (!removed) revert Operable__NotOperator();
         emit OperatorRemoved(operator);
     }
 

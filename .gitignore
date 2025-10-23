@@ -17,6 +17,9 @@
 /ignition/deployments/*/artifacts/
 /ignition/deployments/*/build-info/
 
+# Ignore old deployment directories
+/ignition/deployments/chain-1992/
+
 # Typechain output
 /types
 

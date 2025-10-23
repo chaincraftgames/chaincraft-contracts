@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import '@solidstate/contracts/token/non_fungible/SolidstateNonFungibleToken.sol';
-import '@solidstate/contracts/storage/ERC721Storage.sol';
-import './GameRegistryStorage.sol';
+import { SolidstateNonFungibleToken } from '@solidstate/contracts/token/non_fungible/SolidstateNonFungibleToken.sol';
+import { ERC721Storage } from '@solidstate/contracts/storage/ERC721Storage.sol';
+import { _Initializable } from '@solidstate/contracts/access/initializable/_Initializable.sol';
+import { GameRegistryStorage } from './GameRegistryStorage.sol';
 
 /// @title GameRegistryInternal
 /// @dev Internal functions for GameRegistry functionality
 /// @dev Inherits from SolidstateNonFungibleToken for ERC721 base functionality
-abstract contract GameRegistryInternal is SolidstateNonFungibleToken {
+abstract contract GameRegistryInternal is SolidstateNonFungibleToken, _Initializable {
     
     // ============ Events ============
 
@@ -28,7 +29,6 @@ abstract contract GameRegistryInternal is SolidstateNonFungibleToken {
     error GameRegistry__InvalidMintAddress();
     error GameRegistry__EmptyURI();
     error GameRegistry__EmptyUUID();
-    error GameRegistry__AlreadyInitialized();
     error GameRegistry__TokenDoesNotExist();
     error GameRegistry__URICannotBeEmpty();
     error GameRegistry__GameAlreadyExists();
@@ -37,12 +37,11 @@ abstract contract GameRegistryInternal is SolidstateNonFungibleToken {
     // ============ Internal Functions ============
 
     /// @notice Initialize the GameRegistry
-    /// @dev Can only be called once
+    /// @dev Can only be called once due to initializer modifier
     /// @param name Token name
     /// @param symbol Token symbol
-    function _initialize(string memory name, string memory symbol) internal {
+    function _initialize(string memory name, string memory symbol) internal initializer {
         GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
-        if (ds.nextTokenId != 0) revert GameRegistry__AlreadyInitialized();
         
         // Set name and symbol in ERC721Storage
         ERC721Storage.layout().name = name;
@@ -76,13 +75,13 @@ abstract contract GameRegistryInternal is SolidstateNonFungibleToken {
         uint256 tokenId = ds.nextTokenId;
         ds.nextTokenId++;
 
-        // Mint NFT
-        _mint(to, tokenId);
-        
-        // Store game data
+        // Store game data BEFORE external call (Checks-Effects-Interactions pattern)
         ds.gameURIs[tokenId] = gameURI;
         ds.uuidToTokenId[uuid] = tokenId;
         ds.tokenIdToUUID[tokenId] = uuid;
+
+        // Mint NFT (external call - could trigger reentrant call if 'to' is a contract)
+        _mint(to, tokenId);
 
         emit GamePublished(tokenId, uuid, to, gameURI);
         return tokenId;
@@ -148,13 +147,6 @@ abstract contract GameRegistryInternal is SolidstateNonFungibleToken {
     /// @return The total number of games
     function _totalGames() internal view returns (uint256) {
         return GameRegistryStorage.layout().nextTokenId - 1;
-    }
-
-    /// @notice Check if caller is the token owner
-    /// @param tokenId The token ID to check
-    /// @return True if caller is the token owner
-    function _isTokenOwner(uint256 tokenId) internal view returns (bool) {
-        return _ownerOf(tokenId) == msg.sender;
     }
 
     // ============ Override Functions ============

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import '@solidstate/contracts/access/ownable/_Ownable.sol';
-import './IOperable.sol';
-import './OperableInternal.sol';
+import { _Ownable } from '@solidstate/contracts/access/ownable/_Ownable.sol';
+import { IOperable } from './IOperable.sol';
+import { OperableInternal } from './OperableInternal.sol';
 
 /// @title OperableFacet
 /// @dev Facet for operator management in Diamond pattern

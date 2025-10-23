@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import '@solidstate/contracts/access/ownable/_Ownable.sol';
-import '../OperableFacet/OperableInternal.sol';
-import './GameRegistryInternal.sol';
-import './GameRegistryStorage.sol';
-import './IGameRegistryFacet.sol';
+import { _Ownable } from '@solidstate/contracts/access/ownable/_Ownable.sol';
+import { OperableInternal } from '../OperableFacet/OperableInternal.sol';
+import { GameRegistryInternal } from './GameRegistryInternal.sol';
+import { GameRegistryStorage } from './GameRegistryStorage.sol';
+import { IGameRegistryFacet } from './IGameRegistryFacet.sol';
 
 /// @title GameRegistryFacet
 /// @dev Facet for publishing and managing games as NFTs with UUID tracking
@@ -15,19 +15,12 @@ contract GameRegistryFacet is GameRegistryInternal, OperableInternal, _Ownable, 
     // ============ Errors ============
     
     error GameRegistryFacet__NotOperator();
-    error GameRegistryFacet__NotTokenOwner();
 
     // ============ Modifiers ============
 
     modifier onlyOwnerOrOperator() {
         if (msg.sender != _owner() && !_isOperator(msg.sender)) 
             revert GameRegistryFacet__NotOperator();
-        _;
-    }
-
-    modifier onlyTokenOwner(uint256 tokenId) {
-        if (!_isTokenOwner(tokenId)) 
-            revert GameRegistryFacet__NotTokenOwner();
         _;
     }
 
@@ -50,7 +43,7 @@ contract GameRegistryFacet is GameRegistryInternal, OperableInternal, _Ownable, 
     /// @inheritdoc IGameRegistryFacet
     function updateGameURI(uint256 tokenId, string memory newURI) 
         external
-        onlyTokenOwner(tokenId)
+        onlyOwnerOrOperator
     {
         _updateGameURI(tokenId, newURI);
     }
@@ -58,14 +51,15 @@ contract GameRegistryFacet is GameRegistryInternal, OperableInternal, _Ownable, 
     /// @inheritdoc IGameRegistryFacet
     function updateGameURIByUUID(string memory uuid, string memory newURI) 
         external
+        onlyOwnerOrOperator
     {
         GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
         uint256 tokenId = ds.uuidToTokenId[uuid];
         
         if (tokenId == 0) revert GameRegistry__GameNotFound();
-        if (!_isTokenOwner(tokenId)) revert GameRegistryFacet__NotTokenOwner();
         
-        _updateGameURIByUUID(uuid, newURI);
+        // Call _updateGameURI directly to avoid redundant checks
+        _updateGameURI(tokenId, newURI);
     }
 
     /// @inheritdoc IGameRegistryFacet

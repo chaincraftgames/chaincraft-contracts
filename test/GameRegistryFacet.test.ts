@@ -118,7 +118,10 @@ describe("GameRegistryFacet", () => {
         });
         assert.fail("Should have failed - already initialized");
       } catch (error: any) {
-        assert.ok(error.message.includes("GameRegistry__AlreadyInitialized"));
+        assert.ok(
+          error.message.includes("Initializable__AlreadyInitialized"),
+          `Expected Initializable__AlreadyInitialized error, got: ${error.message}`
+        );
       }
     });
   });
@@ -159,6 +162,52 @@ describe("GameRegistryFacet", () => {
         assert.fail("Should have failed - not owner");
       } catch (error: any) {
         assert.ok(error.message.includes("Ownable"));
+      }
+    });
+
+    it("should not allow adding zero address as operator", async () => {
+      try {
+        await operableFacet.write.addOperator(
+          ["0x0000000000000000000000000000000000000000"],
+          {
+            account: deployer.account,
+          }
+        );
+        assert.fail("Should have failed - zero address");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("Operable__ZeroAddress"),
+          `Expected Operable__ZeroAddress error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should not allow adding duplicate operator", async () => {
+      try {
+        // operator was already added in beforeEach
+        await operableFacet.write.addOperator([operator.account.address], {
+          account: deployer.account,
+        });
+        assert.fail("Should have failed - duplicate operator");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("Operable__AlreadyOperator"),
+          `Expected Operable__AlreadyOperator error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should not allow removing non-existent operator", async () => {
+      try {
+        await operableFacet.write.removeOperator([user2.account.address], {
+          account: deployer.account,
+        });
+        assert.fail("Should have failed - operator does not exist");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("Operable__NotOperator"),
+          `Expected Operable__NotOperator error, got: ${error.message}`
+        );
       }
     });
   });
@@ -316,45 +365,86 @@ describe("GameRegistryFacet", () => {
       tokenId = 1n;
     });
 
-    it("should update game URI by token ID as token owner", async () => {
+    it("should allow owner to update game URI by token ID", async () => {
       const newURI = "ipfs://Qm.../updated-metadata.json";
 
       await gameRegistryFacet.write.updateGameURI([tokenId, newURI], {
-        account: user1.account,
+        account: deployer.account,
       });
 
       const retrievedURI = await gameRegistryFacet.read.tokenURI([tokenId]);
       assert.strictEqual(retrievedURI, newURI);
     });
 
-    it("should update game URI by UUID as token owner", async () => {
+    it("should allow operator to update game URI by token ID", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata-operator.json";
+
+      await gameRegistryFacet.write.updateGameURI([tokenId, newURI], {
+        account: operator.account,
+      });
+
+      const retrievedURI = await gameRegistryFacet.read.tokenURI([tokenId]);
+      assert.strictEqual(retrievedURI, newURI);
+    });
+
+    it("should allow owner to update game URI by UUID", async () => {
       const newURI = "ipfs://Qm.../updated-metadata-2.json";
 
       await gameRegistryFacet.write.updateGameURIByUUID([uuid, newURI], {
-        account: user1.account,
+        account: deployer.account,
       });
 
       const retrievedURI = await gameRegistryFacet.read.tokenURI([tokenId]);
       assert.strictEqual(retrievedURI, newURI);
     });
 
-    it("should not allow non-owner to update game URI", async () => {
-      const newURI = "ipfs://Qm.../updated-metadata-3.json";
+    it("should allow operator to update game URI by UUID", async () => {
+      const newURI = "ipfs://Qm.../updated-metadata-operator-2.json";
+
+      await gameRegistryFacet.write.updateGameURIByUUID([uuid, newURI], {
+        account: operator.account,
+      });
+
+      const retrievedURI = await gameRegistryFacet.read.tokenURI([tokenId]);
+      assert.strictEqual(retrievedURI, newURI);
+    });
+
+    it("should not allow token holder to update game URI", async () => {
+      const newURI = "ipfs://Qm.../malicious-metadata.json";
+
+      try {
+        await gameRegistryFacet.write.updateGameURI([tokenId, newURI], {
+          account: user1.account, // user1 is the token holder
+        });
+        assert.fail("Should have failed - token holder cannot update URI");
+      } catch (error: any) {
+        assert.ok(
+          error.message.includes("GameRegistryFacet__NotOperator"),
+          `Expected GameRegistryFacet__NotOperator error, got: ${error.message}`
+        );
+      }
+    });
+
+    it("should not allow unauthorized user to update game URI", async () => {
+      const newURI = "ipfs://Qm.../unauthorized-metadata.json";
 
       try {
         await gameRegistryFacet.write.updateGameURI([tokenId, newURI], {
           account: user2.account,
         });
-        assert.fail("Should have failed - not token owner");
+        assert.fail("Should have failed - not authorized");
       } catch (error: any) {
-        assert.ok(error.message.includes("GameRegistryFacet__NotTokenOwner"));
+        assert.ok(
+          error.message.includes("GameRegistryFacet__NotOperator"),
+          `Expected GameRegistryFacet__NotOperator error, got: ${error.message}`
+        );
       }
     });
 
     it("should not allow updating with empty URI", async () => {
       try {
         await gameRegistryFacet.write.updateGameURI([tokenId, ""], {
-          account: user1.account,
+          account: deployer.account,
         });
         assert.fail("Should have failed - empty URI");
       } catch (error: any) {
@@ -367,15 +457,13 @@ describe("GameRegistryFacet", () => {
 
       try {
         await gameRegistryFacet.write.updateGameURI([999n, newURI], {
-          account: user1.account,
+          account: deployer.account,
         });
         assert.fail("Should have failed - token does not exist");
       } catch (error: any) {
-        // The modifier checks token ownership first via _ownerOf(), which throws EnumerableMap__NonExistentKey
-        // for non-existent tokens in the SolidState implementation
+        // Now checks via _exists() which properly validates token existence
         const hasExpectedError =
           error.message.includes("GameRegistry__TokenDoesNotExist") ||
-          error.message.includes("GameRegistryFacet__NotTokenOwner") ||
           error.message.includes("EnumerableMap__NonExistentKey") ||
           error.message.includes("ERC721");
 

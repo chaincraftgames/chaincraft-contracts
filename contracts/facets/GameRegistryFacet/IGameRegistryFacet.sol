@@ -24,11 +24,13 @@ interface IGameRegistryFacet {
     ) external returns (uint256);
 
     /// @notice Update the URI for an existing game by token ID
+    /// @dev Only callable by owner or operator (not token holder)
     /// @param tokenId The game NFT token ID
     /// @param newURI New URI for the game
     function updateGameURI(uint256 tokenId, string memory newURI) external;
 
     /// @notice Update the URI for an existing game by UUID
+    /// @dev Only callable by owner or operator (not token holder)
     /// @param uuid The game UUID
     /// @param newURI New URI for the game
     function updateGameURIByUUID(string memory uuid, string memory newURI) external;
