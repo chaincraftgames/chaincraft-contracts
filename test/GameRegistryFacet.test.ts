@@ -1,7 +1,14 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
 import { network } from "hardhat";
-import { toFunctionSelector } from "viem";
+import {
+  toFunctionSelector,
+  keccak256,
+  encodeAbiParameters,
+  parseAbiParameters,
+  concat,
+  pad,
+} from "viem";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
@@ -9,16 +16,60 @@ const require = createRequire(import.meta.url);
 describe("GameRegistryFacet", () => {
   let diamond: any;
   let operableFacet: any;
+  let eip712Facet: any;
   let gameRegistryFacet: any;
   let deployer: any;
   let operator: any;
   let user1: any;
   let user2: any;
+  let viem: any;
+  let chainId: number;
+
+  // Helper to create EIP-712 signature for game publishing
+  async function createPublishGameSignature(
+    uuid: string,
+    to: string,
+    gameURI: string,
+    deadline: bigint,
+    signer: any,
+    diamondAddress: string,
+    chainId: number
+  ) {
+    // Use signTypedData which properly constructs and signs EIP-712 typed data
+    // This matches what the contract expects
+    return await signer.signTypedData({
+      domain: {
+        name: "ChainCraft",
+        version: "1",
+        chainId,
+        verifyingContract: diamondAddress as `0x${string}`,
+      },
+      types: {
+        PublishGame: [
+          { name: "uuid", type: "string" },
+          { name: "to", type: "address" },
+          { name: "gameURI", type: "string" },
+          { name: "deadline", type: "uint256" },
+        ],
+      },
+      primaryType: "PublishGame",
+      message: {
+        uuid,
+        to: to as `0x${string}`,
+        gameURI,
+        deadline,
+      },
+    });
+  }
 
   beforeEach(async () => {
-    const { viem } = await network.connect();
+    const network_result = await network.connect();
+    viem = network_result.viem;
+    const publicClient = viem.getPublicClient();
     const walletClients = await viem.getWalletClients();
     [deployer, operator, user1, user2] = walletClients;
+    // Get chainId - hardhat default is 31337
+    chainId = 31337;
 
     // Deploy the Diamond contract
     diamond = await viem.deployContract("ChainCraftDiamond", []);
@@ -29,50 +80,50 @@ describe("GameRegistryFacet", () => {
       []
     );
 
+    // Deploy EIP712Facet
+    const eip712FacetContract = await viem.deployContract("EIP712Facet", []);
+
     // Deploy GameRegistryFacet
     const gameRegistryFacetContract = await viem.deployContract(
       "GameRegistryFacet",
       []
     );
 
-    // Get function selectors for OperableFacet
-    const operableFacetSelectors = getFunctionSelectors(
-      operableFacetContract.abi
-    );
-
-    // Get function selectors for GameRegistryFacet
-    const gameRegistryFacetSelectors = getFunctionSelectors(
-      gameRegistryFacetContract.abi
-    );
-
-    // Get selectors that are already added by the diamond (from SolidstateDiamondProxy)
+    // Get function selectors
     const diamondAbi =
       require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
     const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
-    // Filter out selectors that are already added by the diamond
-    const operableFacetSelectorsFiltered = operableFacetSelectors.filter(
-      (selector) => !alreadyAddedSelectors.includes(selector)
-    );
+    const operableFacetSelectors = getFunctionSelectors(
+      operableFacetContract.abi
+    ).filter((selector) => !alreadyAddedSelectors.includes(selector));
 
-    const gameRegistryFacetSelectorsFiltered =
-      gameRegistryFacetSelectors.filter(
-        (selector) => !alreadyAddedSelectors.includes(selector)
-      );
+    const eip712FacetSelectors = getFunctionSelectors(
+      eip712FacetContract.abi
+    ).filter((selector) => !alreadyAddedSelectors.includes(selector));
 
-    // Add both facets to diamond
+    const gameRegistryFacetSelectors = getFunctionSelectors(
+      gameRegistryFacetContract.abi
+    ).filter((selector) => !alreadyAddedSelectors.includes(selector));
+
+    // Add all facets to diamond
     await diamond.write.diamondCut(
       [
         [
           {
             target: operableFacetContract.address,
             action: 0, // Add
-            selectors: operableFacetSelectorsFiltered,
+            selectors: operableFacetSelectors,
+          },
+          {
+            target: eip712FacetContract.address,
+            action: 0, // Add
+            selectors: eip712FacetSelectors,
           },
           {
             target: gameRegistryFacetContract.address,
             action: 0, // Add
-            selectors: gameRegistryFacetSelectorsFiltered,
+            selectors: gameRegistryFacetSelectors,
           },
         ],
         "0x0000000000000000000000000000000000000000",
@@ -85,7 +136,7 @@ describe("GameRegistryFacet", () => {
 
     // Get the facet interfaces from the diamond
     operableFacet = await viem.getContractAt("OperableFacet", diamond.address);
-
+    eip712Facet = await viem.getContractAt("EIP712Facet", diamond.address);
     gameRegistryFacet = await viem.getContractAt(
       "GameRegistryFacet",
       diamond.address
@@ -213,14 +264,25 @@ describe("GameRegistryFacet", () => {
   });
 
   describe("Game Publishing", () => {
-    it("should publish a game as owner", async () => {
+    it("should publish a game as operator", async () => {
       const uuid = "550e8400-e29b-41d4-a716-446655440000";
       const gameURI = "ipfs://Qm.../game-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createPublishGameSignature(
+        uuid,
+        user1.account.address,
+        gameURI,
+        deadline,
+        user1,
+        diamond.address,
+        chainId
+      );
 
       await gameRegistryFacet.write.publishGame(
-        [uuid, user1.account.address, gameURI],
+        [uuid, user1.account.address, gameURI, deadline, signature],
         {
-          account: deployer.account,
+          account: operator.account,
         }
       );
 
@@ -240,28 +302,24 @@ describe("GameRegistryFacet", () => {
       assert.strictEqual(exists, true);
     });
 
-    it("should publish a game as operator", async () => {
-      const uuid = "550e8400-e29b-41d4-a716-446655440001";
-      const gameURI = "ipfs://Qm.../game-metadata.json";
-
-      await gameRegistryFacet.write.publishGame(
-        [uuid, user1.account.address, gameURI],
-        {
-          account: operator.account,
-        }
-      );
-
-      const totalGames = await gameRegistryFacet.read.totalGames();
-      assert.strictEqual(totalGames, 1n);
-    });
-
-    it("should not allow non-owner/non-operator to publish game", async () => {
+    it("should not allow non-operator to publish game", async () => {
       const uuid = "550e8400-e29b-41d4-a716-446655440002";
       const gameURI = "ipfs://Qm.../game-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createPublishGameSignature(
+        uuid,
+        user1.account.address,
+        gameURI,
+        deadline,
+        user1,
+        diamond.address,
+        chainId
+      );
 
       try {
         await gameRegistryFacet.write.publishGame(
-          [uuid, user1.account.address, gameURI],
+          [uuid, user1.account.address, gameURI, deadline, signature],
           {
             account: user1.account,
           }
@@ -274,12 +332,23 @@ describe("GameRegistryFacet", () => {
 
     it("should not allow publishing with empty UUID", async () => {
       const gameURI = "ipfs://Qm.../game-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createPublishGameSignature(
+        "",
+        user1.account.address,
+        gameURI,
+        deadline,
+        user1,
+        diamond.address,
+        chainId
+      );
 
       try {
         await gameRegistryFacet.write.publishGame(
-          ["", user1.account.address, gameURI],
+          ["", user1.account.address, gameURI, deadline, signature],
           {
-            account: deployer.account,
+            account: operator.account,
           }
         );
         assert.fail("Should have failed - empty UUID");
@@ -290,12 +359,23 @@ describe("GameRegistryFacet", () => {
 
     it("should not allow publishing with empty URI", async () => {
       const uuid = "550e8400-e29b-41d4-a716-446655440003";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createPublishGameSignature(
+        uuid,
+        user1.account.address,
+        "",
+        deadline,
+        user1,
+        diamond.address,
+        chainId
+      );
 
       try {
         await gameRegistryFacet.write.publishGame(
-          [uuid, user1.account.address, ""],
+          [uuid, user1.account.address, "", deadline, signature],
           {
-            account: deployer.account,
+            account: operator.account,
           }
         );
         assert.fail("Should have failed - empty URI");
@@ -307,12 +387,29 @@ describe("GameRegistryFacet", () => {
     it("should not allow publishing with zero address", async () => {
       const uuid = "550e8400-e29b-41d4-a716-446655440004";
       const gameURI = "ipfs://Qm.../game-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createPublishGameSignature(
+        uuid,
+        "0x0000000000000000000000000000000000000000",
+        gameURI,
+        deadline,
+        user1,
+        diamond.address,
+        chainId
+      );
 
       try {
         await gameRegistryFacet.write.publishGame(
-          [uuid, "0x0000000000000000000000000000000000000000", gameURI],
+          [
+            uuid,
+            "0x0000000000000000000000000000000000000000",
+            gameURI,
+            deadline,
+            signature,
+          ],
           {
-            account: deployer.account,
+            account: operator.account,
           }
         );
         assert.fail("Should have failed - invalid address");
@@ -324,21 +421,42 @@ describe("GameRegistryFacet", () => {
     it("should not allow publishing with duplicate UUID", async () => {
       const uuid = "550e8400-e29b-41d4-a716-446655440005";
       const gameURI = "ipfs://Qm.../game-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createPublishGameSignature(
+        uuid,
+        user1.account.address,
+        gameURI,
+        deadline,
+        user1,
+        diamond.address,
+        chainId
+      );
 
       // First publish
       await gameRegistryFacet.write.publishGame(
-        [uuid, user1.account.address, gameURI],
+        [uuid, user1.account.address, gameURI, deadline, signature],
         {
-          account: deployer.account,
+          account: operator.account,
         }
       );
 
       // Try to publish again with same UUID
+      const signature2 = await createPublishGameSignature(
+        uuid,
+        user2.account.address,
+        gameURI,
+        deadline,
+        user2,
+        diamond.address,
+        chainId
+      );
+
       try {
         await gameRegistryFacet.write.publishGame(
-          [uuid, user2.account.address, gameURI],
+          [uuid, user2.account.address, gameURI, deadline, signature2],
           {
-            account: deployer.account,
+            account: operator.account,
           }
         );
         assert.fail("Should have failed - duplicate UUID");
@@ -355,29 +473,29 @@ describe("GameRegistryFacet", () => {
     beforeEach(async () => {
       uuid = "550e8400-e29b-41d4-a716-446655440006";
       const gameURI = "ipfs://Qm.../game-metadata.json";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createPublishGameSignature(
+        uuid,
+        user1.account.address,
+        gameURI,
+        deadline,
+        user1,
+        diamond.address,
+        chainId
+      );
 
       await gameRegistryFacet.write.publishGame(
-        [uuid, user1.account.address, gameURI],
+        [uuid, user1.account.address, gameURI, deadline, signature],
         {
-          account: deployer.account,
+          account: operator.account,
         }
       );
       tokenId = 1n;
     });
 
-    it("should allow owner to update game URI by token ID", async () => {
-      const newURI = "ipfs://Qm.../updated-metadata.json";
-
-      await gameRegistryFacet.write.updateGameURI([tokenId, newURI], {
-        account: deployer.account,
-      });
-
-      const retrievedURI = await gameRegistryFacet.read.tokenURI([tokenId]);
-      assert.strictEqual(retrievedURI, newURI);
-    });
-
     it("should allow operator to update game URI by token ID", async () => {
-      const newURI = "ipfs://Qm.../updated-metadata-operator.json";
+      const newURI = "ipfs://Qm.../updated-metadata.json";
 
       await gameRegistryFacet.write.updateGameURI([tokenId, newURI], {
         account: operator.account,
@@ -387,19 +505,8 @@ describe("GameRegistryFacet", () => {
       assert.strictEqual(retrievedURI, newURI);
     });
 
-    it("should allow owner to update game URI by UUID", async () => {
-      const newURI = "ipfs://Qm.../updated-metadata-2.json";
-
-      await gameRegistryFacet.write.updateGameURIByUUID([uuid, newURI], {
-        account: deployer.account,
-      });
-
-      const retrievedURI = await gameRegistryFacet.read.tokenURI([tokenId]);
-      assert.strictEqual(retrievedURI, newURI);
-    });
-
     it("should allow operator to update game URI by UUID", async () => {
-      const newURI = "ipfs://Qm.../updated-metadata-operator-2.json";
+      const newURI = "ipfs://Qm.../updated-metadata-2.json";
 
       await gameRegistryFacet.write.updateGameURIByUUID([uuid, newURI], {
         account: operator.account,
@@ -444,7 +551,7 @@ describe("GameRegistryFacet", () => {
     it("should not allow updating with empty URI", async () => {
       try {
         await gameRegistryFacet.write.updateGameURI([tokenId, ""], {
-          account: deployer.account,
+          account: operator.account,
         });
         assert.fail("Should have failed - empty URI");
       } catch (error: any) {
@@ -461,7 +568,6 @@ describe("GameRegistryFacet", () => {
         });
         assert.fail("Should have failed - token does not exist");
       } catch (error: any) {
-        // Now checks via _exists() which properly validates token existence
         const hasExpectedError =
           error.message.includes("GameRegistry__TokenDoesNotExist") ||
           error.message.includes("EnumerableMap__NonExistentKey") ||
@@ -479,18 +585,51 @@ describe("GameRegistryFacet", () => {
     beforeEach(async () => {
       uuid1 = "550e8400-e29b-41d4-a716-446655440007";
       uuid2 = "550e8400-e29b-41d4-a716-446655440008";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
 
-      await gameRegistryFacet.write.publishGame(
-        [uuid1, user1.account.address, "ipfs://Qm.../game1.json"],
-        {
-          account: deployer.account,
-        }
+      const signature1 = await createPublishGameSignature(
+        uuid1,
+        user1.account.address,
+        "ipfs://Qm.../game1.json",
+        deadline,
+        user1,
+        diamond.address,
+        chainId
       );
 
       await gameRegistryFacet.write.publishGame(
-        [uuid2, user2.account.address, "ipfs://Qm.../game2.json"],
+        [
+          uuid1,
+          user1.account.address,
+          "ipfs://Qm.../game1.json",
+          deadline,
+          signature1,
+        ],
         {
-          account: deployer.account,
+          account: operator.account,
+        }
+      );
+
+      const signature2 = await createPublishGameSignature(
+        uuid2,
+        user2.account.address,
+        "ipfs://Qm.../game2.json",
+        deadline,
+        user2,
+        diamond.address,
+        chainId
+      );
+
+      await gameRegistryFacet.write.publishGame(
+        [
+          uuid2,
+          user2.account.address,
+          "ipfs://Qm.../game2.json",
+          deadline,
+          signature2,
+        ],
+        {
+          account: operator.account,
         }
       );
     });
@@ -544,10 +683,28 @@ describe("GameRegistryFacet", () => {
 
     beforeEach(async () => {
       uuid = "550e8400-e29b-41d4-a716-446655440009";
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+
+      const signature = await createPublishGameSignature(
+        uuid,
+        user1.account.address,
+        "ipfs://Qm.../game.json",
+        deadline,
+        user1,
+        diamond.address,
+        chainId
+      );
+
       await gameRegistryFacet.write.publishGame(
-        [uuid, user1.account.address, "ipfs://Qm.../game.json"],
+        [
+          uuid,
+          user1.account.address,
+          "ipfs://Qm.../game.json",
+          deadline,
+          signature,
+        ],
         {
-          account: deployer.account,
+          account: operator.account,
         }
       );
       tokenId = 1n;

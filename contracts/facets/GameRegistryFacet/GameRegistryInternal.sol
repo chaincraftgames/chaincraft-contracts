@@ -5,12 +5,23 @@ import { SolidstateNonFungibleToken } from '@solidstate/contracts/token/non_fung
 import { ERC721Storage } from '@solidstate/contracts/storage/ERC721Storage.sol';
 import { _Initializable } from '@solidstate/contracts/access/initializable/_Initializable.sol';
 import { GameRegistryStorage } from './GameRegistryStorage.sol';
+import { EIP712Internal } from '../EIP712Facet/EIP712Internal.sol';
 
 /// @title GameRegistryInternal
 /// @dev Internal functions for GameRegistry functionality
-/// @dev Inherits from SolidstateNonFungibleToken for ERC721 base functionality
-abstract contract GameRegistryInternal is SolidstateNonFungibleToken, _Initializable {
+abstract contract GameRegistryInternal is 
+    SolidstateNonFungibleToken, 
+    _Initializable,
+    EIP712Internal 
+{
     
+    // ============ Constants ============
+    
+    /// @dev TypeHash for PublishGame struct
+    bytes32 private constant PUBLISH_GAME_TYPEHASH = keccak256(
+        "PublishGame(string uuid,address to,string gameURI,uint256 deadline)"
+    );
+
     // ============ Events ============
 
     /// @notice Emitted when a new game is published
@@ -33,6 +44,7 @@ abstract contract GameRegistryInternal is SolidstateNonFungibleToken, _Initializ
     error GameRegistry__URICannotBeEmpty();
     error GameRegistry__GameAlreadyExists();
     error GameRegistry__GameNotFound();
+    error GameRegistry__SignerMismatch();
 
     // ============ Internal Functions ============
 
@@ -54,15 +66,20 @@ abstract contract GameRegistryInternal is SolidstateNonFungibleToken, _Initializ
         _setSupportsInterface(0x780e9d63, true); // ERC721Enumerable
     }
 
-    /// @notice Publish a new game as an NFT
+    /// @notice Publish a new game as an NFT with EIP-712 signature verification
+    /// @dev Requires user signature to prove consent. Operator submits the transaction.
     /// @param uuid Unique identifier for the game
-    /// @param to Address to mint the game NFT to
+    /// @param to Address to mint the game NFT to (must match signer)
     /// @param gameURI URI containing game metadata
+    /// @param deadline Signature expiration timestamp
+    /// @param signature EIP-712 signature from the recipient
     /// @return tokenId The ID of the newly minted game NFT
     function _publishGame(
         string memory uuid,
         address to,
-        string memory gameURI
+        string memory gameURI,
+        uint256 deadline,
+        bytes memory signature
     ) internal returns (uint256) {
         GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
         
@@ -72,18 +89,38 @@ abstract contract GameRegistryInternal is SolidstateNonFungibleToken, _Initializ
         if (bytes(uuid).length == 0) revert GameRegistry__EmptyUUID();
         if (ds.uuidToTokenId[uuid] != 0) revert GameRegistry__GameAlreadyExists();
 
+        // Create struct hash for signature verification
+        bytes32 structHash = keccak256(
+            abi.encode(
+                PUBLISH_GAME_TYPEHASH,
+                keccak256(bytes(uuid)),
+                to,
+                keccak256(bytes(gameURI)),
+                deadline
+            )
+        );
+
+        // Verify signature and recover signer
+        address signer = _verifySignatureAndRecover(structHash, deadline, signature);
+
+        // Ensure the signer is the recipient to prevent operator from minting without user consent
+        if (signer != to) {
+            revert GameRegistry__SignerMismatch();
+        }
+
         uint256 tokenId = ds.nextTokenId;
         ds.nextTokenId++;
 
-        // Store game data BEFORE external call (Checks-Effects-Interactions pattern)
+        // Store game data before minting
         ds.gameURIs[tokenId] = gameURI;
         ds.uuidToTokenId[uuid] = tokenId;
         ds.tokenIdToUUID[tokenId] = uuid;
 
-        // Mint NFT (external call - could trigger reentrant call if 'to' is a contract)
+        // Mint NFT to recipient
         _mint(to, tokenId);
 
         emit GamePublished(tokenId, uuid, to, gameURI);
+        
         return tokenId;
     }
 

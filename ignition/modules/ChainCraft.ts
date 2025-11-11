@@ -35,6 +35,11 @@ export default buildModule("ChainCraft", (m) => {
     id: "OperableFacet",
   });
 
+  // Deploy EIP712Facet
+  const eip712Facet = m.contract("EIP712Facet", [], {
+    id: "EIP712Facet",
+  });
+
   // Deploy GameRegistryFacet
   const gameRegistryFacet = m.contract("GameRegistryFacet", [], {
     id: "GameRegistryFacet",
@@ -49,6 +54,9 @@ export default buildModule("ChainCraft", (m) => {
 
   const operableFacetAbi =
     require("../../artifacts/contracts/facets/OperableFacet/OperableFacet.sol/OperableFacet.json").abi;
+
+  const eip712FacetAbi =
+    require("../../artifacts/contracts/facets/EIP712Facet/EIP712Facet.sol/EIP712Facet.json").abi;
 
   const gameRegistryFacetAbi =
     require("../../artifacts/contracts/facets/GameRegistryFacet/GameRegistryFacet.sol/GameRegistryFacet.json").abi;
@@ -65,6 +73,9 @@ export default buildModule("ChainCraft", (m) => {
   // Get selectors for OperableFacet
   const operableFacetSelectors = getFunctionSelectors(operableFacetAbi);
 
+  // Get selectors for EIP712Facet
+  const eip712FacetSelectors = getFunctionSelectors(eip712FacetAbi);
+
   // Get selectors for GameRegistryFacet
   const gameRegistryFacetSelectors = getFunctionSelectors(gameRegistryFacetAbi);
 
@@ -78,6 +89,10 @@ export default buildModule("ChainCraft", (m) => {
 
   // Filter out selectors that are already added by the diamond
   const operableFacetSelectorsFiltered = operableFacetSelectors.filter(
+    (selector) => !alreadyAddedSelectors.includes(selector)
+  );
+
+  const eip712FacetSelectorsFiltered = eip712FacetSelectors.filter(
     (selector) => !alreadyAddedSelectors.includes(selector)
   );
 
@@ -101,6 +116,11 @@ export default buildModule("ChainCraft", (m) => {
           target: operableFacet,
           action: FacetCutAction.Add,
           selectors: operableFacetSelectorsFiltered,
+        },
+        {
+          target: eip712Facet,
+          action: FacetCutAction.Add,
+          selectors: eip712FacetSelectorsFiltered,
         },
         {
           target: gameRegistryFacet,
@@ -136,6 +156,7 @@ export default buildModule("ChainCraft", (m) => {
   return {
     diamond,
     operableFacet,
+    eip712Facet,
     gameRegistryFacet,
     // Uncomment if deploying ProxyAdminFacet
     // proxyAdminFacet,

@@ -11,6 +11,7 @@ Diamond proxy-based smart contract system for managing game NFTs. Games are publ
 - ✅ **EIP-2535 Diamond Pattern** - Upgradeable and modular
 - ✅ **ERC721 Game NFTs** - Each game is a unique NFT
 - ✅ **UUID-Based Registry** - Link off-chain game IDs to on-chain tokens
+- ✅ **EIP-712 Signatures** - User consent required for game publishing
 - ✅ **Operator System** - Delegate game publishing to trusted addresses
 - ✅ **Secure Access Control** - Diamond admin + Owner + Operators
 - ✅ **EIP-7201 Storage** - No collision risk
@@ -21,9 +22,11 @@ Diamond proxy-based smart contract system for managing game NFTs. Games are publ
 ChainCraftDiamond (Proxy)
 ├── ProxyAdminFacet      - Transfer diamond admin rights
 ├── OperableFacet        - Manage operators
+├── EIP712Facet          - EIP-712 signature verification
 └── GameRegistryFacet    - Publish & manage game NFTs
     ├── ERC721 Standard  - Transfer, approve, etc.
-    └── UUID Registry    - Map game IDs to tokens
+    ├── UUID Registry    - Map game IDs to tokens
+    └── EIP-712 Auth     - User signature verification
 ```
 
 ### Access Control
@@ -84,14 +87,49 @@ await diamond.write.initialize(["ChainCraft Games", "CCG"]);
 // Add operator (your backend wallet)
 await diamond.write.addOperator([operatorAddress]);
 
-// Publish game
-await diamond.write.publishGame([
-  "game-uuid-123", // UUID from your game builder
-  playerAddress, // Who receives the NFT
-  "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", // Game metadata URI
-]);
+// User signs EIP-712 message to consent to game publishing
+// Using viem wallet client (or ethers.js, web3.js, etc.)
+const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600); // 1 hour
+const signature = await walletClient.signTypedData({
+  domain: {
+    name: "ChainCraft",
+    version: "1",
+    chainId: 1992, // Your chain ID
+    verifyingContract: diamondAddress,
+  },
+  types: {
+    PublishGame: [
+      { name: "uuid", type: "string" },
+      { name: "to", type: "address" },
+      { name: "gameURI", type: "string" },
+      { name: "deadline", type: "uint256" },
+    ],
+  },
+  primaryType: "PublishGame",
+  message: {
+    uuid: "game-uuid-123",
+    to: playerAddress,
+    gameURI:
+      "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+    deadline,
+  },
+});
 
-// Update game metadata (operator only)
+// Operator publishes game with user's signature
+await diamond.write.publishGame(
+  [
+    "game-uuid-123", // UUID from your game builder
+    playerAddress, // Who receives the NFT (must match signer)
+    "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", // Game metadata URI
+    deadline, // Signature expiration
+    signature, // User's EIP-712 signature
+  ],
+  {
+    account: operatorAccount, // Operator submits the transaction
+  }
+);
+
+// Update game metadata (operator only, no signature needed)
 await diamond.write.updateGameURIByUUID([
   "game-uuid-123",
   "ipfs://bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
@@ -179,16 +217,17 @@ await diamond.write.acceptOwnership({ account: newOwner });
 ## Testing
 
 ```bash
-# Run all tests (57 tests)
+# Run all tests (62 tests)
 pnpm test
 
 # Test breakdown:
 # - Diamond Access Control: 14 tests
-# - GameRegistry Facet: 32 tests
-# - ProxyAdmin Facet: 11 tests
+# - EIP712 Facet: 5 tests
+# - GameRegistry Facet: 33 tests
+# - ProxyAdmin Facet: 10 tests
 ```
 
-All tests passing: **57/57** ✅
+All tests passing: **62/62** ✅
 
 See [SECURITY_NOTES.md](./SECURITY_NOTES.md) for detailed security analysis.
 
@@ -225,10 +264,12 @@ contracts/
 └── facets/
     ├── ProxyAdminFacet/            # Admin transfer
     ├── OperableFacet/              # Operator management
+    ├── EIP712Facet/                # EIP-712 signature verification
     └── GameRegistryFacet/          # Game NFT registry
 
 test/
 ├── DiamondAccessControl.test.ts    # Diamond security tests
+├── EIP712Facet.test.ts             # EIP-712 signature tests
 ├── GameRegistryFacet.test.ts       # Game registry tests
 └── ProxyAdminFacet.test.ts         # Admin transfer tests
 ```
@@ -236,6 +277,7 @@ test/
 ## Resources
 
 - **EIP-2535 Diamond Standard**: https://eips.ethereum.org/EIPS/eip-2535
+- **EIP-712 Typed Data Signing**: https://eips.ethereum.org/EIPS/eip-712
 - **EIP-7201 Storage Namespacing**: https://eips.ethereum.org/EIPS/eip-7201
 - **SolidState Contracts**: https://github.com/solidstate-network/solidstate-solidity
 - **Hardhat Documentation**: https://hardhat.org/docs

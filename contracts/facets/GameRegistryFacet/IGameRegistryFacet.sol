@@ -12,15 +12,20 @@ interface IGameRegistryFacet {
     /// @param symbol Token symbol
     function initialize(string memory name, string memory symbol) external;
 
-    /// @notice Publish a new game as an NFT
+    /// @notice Publish a new game as an NFT with EIP-712 signature verification
+    /// @dev Requires user signature to prove consent. Operator submits the transaction.
     /// @param uuid Unique identifier for the game (from your app)
-    /// @param to Address to mint the game NFT to
+    /// @param to Address to mint the game NFT to (must match signature signer)
     /// @param gameURI URI containing game metadata
+    /// @param deadline Signature expiration timestamp
+    /// @param signature EIP-712 signature from the recipient
     /// @return tokenId The ID of the newly minted game NFT
     function publishGame(
         string memory uuid,
-        address to, 
-        string memory gameURI
+        address to,
+        string memory gameURI,
+        uint256 deadline,
+        bytes memory signature
     ) external returns (uint256);
 
     /// @notice Update the URI for an existing game by token ID

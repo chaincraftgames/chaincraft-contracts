@@ -9,7 +9,6 @@ import { IGameRegistryFacet } from './IGameRegistryFacet.sol';
 
 /// @title GameRegistryFacet
 /// @dev Facet for publishing and managing games as NFTs with UUID tracking
-/// @dev Combines ERC721 functionality with game-specific metadata and UUID registry
 contract GameRegistryFacet is GameRegistryInternal, OperableInternal, _Ownable, IGameRegistryFacet {
 
     // ============ Errors ============
@@ -35,9 +34,11 @@ contract GameRegistryFacet is GameRegistryInternal, OperableInternal, _Ownable, 
     function publishGame(
         string memory uuid,
         address to,
-        string memory gameURI
+        string memory gameURI,
+        uint256 deadline,
+        bytes memory signature
     ) external onlyOwnerOrOperator returns (uint256) {
-        return _publishGame(uuid, to, gameURI);
+        return _publishGame(uuid, to, gameURI, deadline, signature);
     }
 
     /// @inheritdoc IGameRegistryFacet
@@ -58,7 +59,6 @@ contract GameRegistryFacet is GameRegistryInternal, OperableInternal, _Ownable, 
         
         if (tokenId == 0) revert GameRegistry__GameNotFound();
         
-        // Call _updateGameURI directly to avoid redundant checks
         _updateGameURI(tokenId, newURI);
     }
 
