@@ -62,6 +62,22 @@ contract GameRegistryFacet is GameRegistryInternal, OperableInternal, _Ownable, 
     }
 
     /// @inheritdoc IGameRegistryFacet
+    function updateGameURIByOperator(
+        uint256 tokenId,
+        string memory newURI
+    ) external onlyOwnerOrOperator {
+        _updateGameURIByOperator(tokenId, newURI);
+    }
+
+    /// @inheritdoc IGameRegistryFacet
+    function updateGameURIByUUIDByOperator(
+        string memory uuid,
+        string memory newURI
+    ) external onlyOwnerOrOperator {
+        _updateGameURIByUUIDByOperator(uuid, newURI);
+    }
+
+    /// @inheritdoc IGameRegistryFacet
     function getTokenIdByUUID(string memory uuid) external view returns (uint256) {
         return _getTokenIdByUUID(uuid);
     }

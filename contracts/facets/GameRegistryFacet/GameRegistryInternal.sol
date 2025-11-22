@@ -211,6 +211,46 @@ abstract contract GameRegistryInternal is
         _updateGameURI(tokenId, newURI, deadline, signature);
     }
 
+    /// @notice Update game URI by operator without requiring owner signature
+    /// @dev Only callable by operators/owner. No signature required.
+    /// @param tokenId The game NFT token ID
+    /// @param newURI New URI for the game (max 1024 characters)
+    function _updateGameURIByOperator(
+        uint256 tokenId,
+        string memory newURI
+    ) internal {
+        if (!_exists(tokenId)) revert GameRegistry__TokenDoesNotExist();
+        
+        // URI validation
+        if (bytes(newURI).length == 0) revert GameRegistry__URICannotBeEmpty();
+        if (bytes(newURI).length > MAX_URI_LENGTH) revert GameRegistry__URITooLong();
+        
+        GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
+        string memory uuid = ds.tokenIdToUUID[tokenId];
+        
+        ds.gameURIs[tokenId] = newURI;
+        emit GameURIUpdated(tokenId, uuid, newURI);
+    }
+
+    /// @notice Update game URI by UUID by operator without requiring owner signature
+    /// @dev Only callable by operators/owner. No signature required.
+    /// @param uuid The game UUID (must be UUID v4 format, 36 characters)
+    /// @param newURI New URI for the game (max 1024 characters)
+    function _updateGameURIByUUIDByOperator(
+        string memory uuid,
+        string memory newURI
+    ) internal {
+        // UUID validation
+        if (bytes(uuid).length != UUID_LENGTH) revert GameRegistry__InvalidUUIDLength();
+        
+        GameRegistryStorage.Layout storage ds = GameRegistryStorage.layout();
+        uint256 tokenId = ds.uuidToTokenId[uuid];
+        
+        if (tokenId == 0) revert GameRegistry__GameNotFound();
+        
+        _updateGameURIByOperator(tokenId, newURI);
+    }
+
     /// @notice Get the token URI for a game
     /// @param tokenId The token ID
     /// @return The token URI

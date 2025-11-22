@@ -54,6 +54,24 @@ interface IGameRegistryFacet {
         bytes memory signature
     ) external;
 
+    /// @notice Update the URI for an existing game by token ID (operator only, no signature required)
+    /// @dev Only callable by operators/owner. No token owner signature required.
+    /// @param tokenId The game NFT token ID
+    /// @param newURI New URI for the game
+    function updateGameURIByOperator(
+        uint256 tokenId,
+        string memory newURI
+    ) external;
+
+    /// @notice Update the URI for an existing game by UUID (operator only, no signature required)
+    /// @dev Only callable by operators/owner. No token owner signature required.
+    /// @param uuid The game UUID
+    /// @param newURI New URI for the game
+    function updateGameURIByUUIDByOperator(
+        string memory uuid,
+        string memory newURI
+    ) external;
+
     /// @notice Get token ID by UUID
     /// @param uuid The game UUID
     /// @return tokenId The token ID (0 if not found)
