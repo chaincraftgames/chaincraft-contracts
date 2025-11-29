@@ -15,6 +15,21 @@ Diamond proxy-based smart contract system for managing game NFTs. Each game is p
 - ✅ **Operator System** - Delegate publishing rights to trusted addresses
 - ✅ **EIP-7201 Storage** - Namespaced storage prevents collisions
 
+## Deployments
+
+### Testnet
+
+#### Sanko Testnet (Chain ID: 1992)
+
+- **Diamond Contract:** `0x1B58c30316578e76604C4aF39748a223e149DED8`
+- **Explorer:** https://sanko-arb-sepolia.explorer.caldera.xyz/address/0x1B58c30316578e76604C4aF39748a223e149DED8
+- **RPC:** https://sanko-arb-sepolia.rpc.caldera.xyz/http
+- **Network:** Sanko Arbitrum Sepolia
+
+### Mainnet
+
+_Coming soon_
+
 ## Installation
 
 ```bash
