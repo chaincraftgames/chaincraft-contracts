@@ -24,8 +24,8 @@ function getFunctionSelectors(abi: any[]): string[] {
 
 export default buildModule("ChainCraftDev", (m) => {
   // ============ Deploy Diamond ============
-  const diamond = m.contract("ChainCraftDiamond", [], {
-    id: "ChainCraftDiamond",
+  const diamond = m.contract("CCGRDiamond", [], {
+    id: "CCGRDiamond",
   });
 
   // ============ Deploy Facets ============
@@ -62,7 +62,7 @@ export default buildModule("ChainCraftDev", (m) => {
     require("../../artifacts/contracts/facets/GameRegistryFacet/GameRegistryFacet.sol/GameRegistryFacet.json").abi;
 
   const diamondAbi =
-    require("../../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+    require("../../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
 
   // Uncomment if deploying ProxyAdminFacet
   // const proxyAdminFacetAbi =

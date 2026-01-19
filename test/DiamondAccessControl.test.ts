@@ -22,7 +22,7 @@ describe("Diamond Access Control", () => {
 
     // Deploy the Diamond contract
     // The deployer will be both the proxy admin and the owner
-    diamond = await viem.deployContract("ChainCraftDiamond", [], {
+    diamond = await viem.deployContract("CCGRDiamond", [], {
       account: deployer.account,
     });
   });
@@ -34,7 +34,7 @@ describe("Diamond Access Control", () => {
 
       // Get function selectors
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const operableFacetSelectors = getFunctionSelectors(
         operableFacet.abi
@@ -74,7 +74,7 @@ describe("Diamond Access Control", () => {
       const maliciousFacet = await viem.deployContract("OperableFacet", []);
 
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const maliciousFacetSelectors = getFunctionSelectors(
         maliciousFacet.abi
@@ -122,7 +122,7 @@ describe("Diamond Access Control", () => {
       const testFacet = await viem.deployContract("OperableFacet", []);
 
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const testFacetSelectors = getFunctionSelectors(testFacet.abi).filter(
         (selector) => !alreadyAddedSelectors.includes(selector)
@@ -159,7 +159,7 @@ describe("Diamond Access Control", () => {
       const originalFacet = await viem.deployContract("OperableFacet", []);
 
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const facetSelectors = getFunctionSelectors(originalFacet.abi).filter(
         (selector) => !alreadyAddedSelectors.includes(selector)
@@ -216,7 +216,7 @@ describe("Diamond Access Control", () => {
       const facetToRemove = await viem.deployContract("OperableFacet", []);
 
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const facetSelectors = getFunctionSelectors(facetToRemove.abi).filter(
         (selector) => !alreadyAddedSelectors.includes(selector)
@@ -378,7 +378,7 @@ describe("Diamond Access Control", () => {
       const maliciousFacet = await viem.deployContract("GameRegistryFacet", []);
 
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const maliciousSelectors = getFunctionSelectors(
         maliciousFacet.abi
@@ -427,7 +427,7 @@ describe("Diamond Access Control", () => {
       const facet2 = await viem.deployContract("GameRegistryFacet", []);
 
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
       // First attacker tries to add a facet
@@ -504,7 +504,7 @@ describe("Diamond Access Control", () => {
       // The deployer should also be able to perform admin actions (diamondCut)
       const testFacet = await viem.deployContract("OperableFacet", []);
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const facetSelectors = getFunctionSelectors(testFacet.abi).filter(
         (selector) => !alreadyAddedSelectors.includes(selector)
@@ -551,7 +551,7 @@ describe("Diamond Access Control", () => {
       // But deployer should still be able to perform diamond cuts (still proxy admin)
       const testFacet = await viem.deployContract("OperableFacet", []);
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const facetSelectors = getFunctionSelectors(testFacet.abi).filter(
         (selector) => !alreadyAddedSelectors.includes(selector)

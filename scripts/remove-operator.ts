@@ -65,13 +65,13 @@ function getDeployedAddress(
       fs.readFileSync(deploymentPath, "utf-8")
     );
 
-    const contractKey = `${moduleName}#ChainCraftDiamond`;
+    const contractKey = `${moduleName}#CCGRDiamond`;
     const diamondAddress = deployedAddresses[contractKey];
 
     if (!diamondAddress) {
       // List available contracts to help the user
       const availableContracts = Object.keys(deployedAddresses)
-        .filter((key) => key.includes("ChainCraftDiamond"))
+        .filter((key) => key.includes("CCGRDiamond"))
         .map((key) => `  - ${key}`)
         .join("\n");
 
@@ -90,7 +90,7 @@ function getDeployedAddress(
 }
 
 async function main() {
-  console.log("🔧 Removing operator from ChainCraftDiamond contract...");
+  console.log("🔧 Removing operator from CCGRDiamond contract...");
 
   // Get the operator address from environment variable
   const operatorAddress = process.env.OPERATOR_ADDR;

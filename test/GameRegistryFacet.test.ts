@@ -104,7 +104,7 @@ describe("GameRegistryFacet", () => {
     chainId = 31337;
 
     // Deploy the Diamond contract
-    diamond = await viem.deployContract("ChainCraftDiamond", []);
+    diamond = await viem.deployContract("CCGRDiamond", []);
 
     // Deploy OperableFacet
     const operableFacetContract = await viem.deployContract(
@@ -123,7 +123,7 @@ describe("GameRegistryFacet", () => {
 
     // Get function selectors
     const diamondAbi =
-      require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+      require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
     const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
     const operableFacetSelectors = getFunctionSelectors(

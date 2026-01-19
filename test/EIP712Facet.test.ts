@@ -33,7 +33,7 @@ describe("EIP712Facet", () => {
     [deployer, operator, user, attacker] = walletClients;
 
     // Deploy the Diamond contract
-    diamond = await viem.deployContract("ChainCraftDiamond", [], {
+    diamond = await viem.deployContract("CCGRDiamond", [], {
       account: deployer.account,
     });
 
@@ -54,7 +54,7 @@ describe("EIP712Facet", () => {
 
     // Get function selectors
     const diamondAbi =
-      require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+      require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
     const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
 
     const eip712Selectors = getFunctionSelectors(

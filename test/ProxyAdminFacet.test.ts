@@ -21,7 +21,7 @@ describe("ProxyAdminFacet - Admin Transfer", () => {
     [deployer, companyWallet, attacker] = walletClients;
 
     // Deploy the Diamond contract
-    diamond = await viem.deployContract("ChainCraftDiamond", [], {
+    diamond = await viem.deployContract("CCGRDiamond", [], {
       account: deployer.account,
     });
 
@@ -33,7 +33,7 @@ describe("ProxyAdminFacet - Admin Transfer", () => {
 
     // Get function selectors
     const diamondAbi =
-      require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+      require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
     const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
     const proxyAdminSelectors = getFunctionSelectors(
       proxyAdminFacetContract.abi
@@ -169,7 +169,7 @@ describe("ProxyAdminFacet - Admin Transfer", () => {
       // Deploy a test facet
       const testFacet = await viem.deployContract("OperableFacet", []);
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const testSelectors = getFunctionSelectors(testFacet.abi).filter(
         (selector) => !alreadyAddedSelectors.includes(selector)
@@ -214,7 +214,7 @@ describe("ProxyAdminFacet - Admin Transfer", () => {
       // Deploy a test facet
       const testFacet = await viem.deployContract("OperableFacet", []);
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const testSelectors = getFunctionSelectors(testFacet.abi).filter(
         (selector) => !alreadyAddedSelectors.includes(selector)
@@ -314,7 +314,7 @@ describe("ProxyAdminFacet - Admin Transfer", () => {
       // Try diamond cut with deployer
       const testFacet = await viem.deployContract("OperableFacet", []);
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const testSelectors = getFunctionSelectors(testFacet.abi).filter(
         (selector) => !alreadyAddedSelectors.includes(selector)
@@ -391,7 +391,7 @@ describe("ProxyAdminFacet - Admin Transfer", () => {
       // (proving it's still the proxy admin, just can't transfer it anymore)
       const testFacet = await viem.deployContract("OperableFacet", []);
       const diamondAbi =
-        require("../artifacts/contracts/ChainCraftDiamond.sol/ChainCraftDiamond.json").abi;
+        require("../artifacts/contracts/CCGRDiamond.sol/CCGRDiamond.json").abi;
       const alreadyAddedSelectors = getFunctionSelectors(diamondAbi);
       const testSelectors = getFunctionSelectors(testFacet.abi).filter(
         (selector) => !alreadyAddedSelectors.includes(selector)

@@ -46,7 +46,10 @@ const DIAMOND_ABI = [
   },
 ] as const;
 
-function getDeployedAddress(chainId: number): string {
+function getDeployedAddress(
+  chainId: number,
+  moduleName: string = "ChainCraft"
+): string {
   try {
     const deploymentPath = path.join(
       process.cwd(),
@@ -66,11 +69,20 @@ function getDeployedAddress(chainId: number): string {
       fs.readFileSync(deploymentPath, "utf-8")
     );
 
-    const diamondAddress = deployedAddresses["ChainCraft#ChainCraftDiamond"];
+    const contractKey = `${moduleName}#CCGRDiamond`;
+    const diamondAddress = deployedAddresses[contractKey];
 
     if (!diamondAddress) {
+      // List available contracts to help the user
+      const availableContracts = Object.keys(deployedAddresses)
+        .filter((key) => key.includes("CCGRDiamond"))
+        .map((key) => `  - ${key}`)
+        .join("\n");
+
       throw new Error(
-        `ChainCraftDiamond address not found in deployment file for chain ${chainId}`
+        `Contract "${contractKey}" not found in deployment file for chain ${chainId}.\n` +
+          `Available contracts:\n${availableContracts || "  (none found)"}\n` +
+          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "ChainCraft" or "ChainCraftDev")`
       );
     }
 
@@ -82,14 +94,18 @@ function getDeployedAddress(chainId: number): string {
 }
 
 async function main() {
-  console.log("📋 Listing operators for ChainCraftDiamond contract...");
+  console.log("📋 Listing operators for CCGRDiamond contract...");
+
+  // Get contract module name (defaults to "ChainCraft" for backward compatibility)
+  const contractModule = process.env.CONTRACT_MODULE || "ChainCraft";
+  console.log(`📦 Using contract module: ${contractModule}`);
 
   // Get network configuration
   const { chain, chainId, rpcUrl } = getNetworkConfig(hre);
 
   try {
     // Get deployed contract address for the chain
-    const contractAddress = getDeployedAddress(chainId);
+    const contractAddress = getDeployedAddress(chainId, contractModule);
     console.log(`📋 Contract Address: ${contractAddress}`);
     console.log(`🔗 Chain: ${chain.name} (${chain.id})`);
 

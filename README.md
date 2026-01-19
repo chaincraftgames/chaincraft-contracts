@@ -44,7 +44,7 @@ pnpm hardhat ignition deploy ignition/modules/ChainCraft.ts --network <your-netw
 ## Architecture
 
 ```
-ChainCraftDiamond (EIP-2535 Proxy)
+CCGRDiamond (EIP-2535 Proxy)
 ├── OperableFacet        - Manage operators
 ├── EIP712Facet          - EIP-712 signature verification
 └── GameRegistryFacet    - Publish & manage game NFTs
@@ -106,7 +106,7 @@ All tests passing: **62/62** ✅
 
 ```
 contracts/
-├── ChainCraftDiamond.sol           # Main diamond proxy
+├── CCGRDiamond.sol                 # Main diamond proxy
 └── facets/
     ├── ProxyAdminFacet/            # Admin transfer (optional)
     ├── OperableFacet/              # Operator management
