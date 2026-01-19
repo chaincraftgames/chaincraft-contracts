@@ -18,7 +18,7 @@ import path from "path";
 
 const require = createRequire(import.meta.url);
 
-// Diamond ABI for diamondCut
+// Diamond ABI (just diamondCut function)
 const DIAMOND_ABI = [
   {
     type: "function",

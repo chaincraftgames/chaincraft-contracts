@@ -19,8 +19,8 @@ Diamond proxy-based smart contract system for managing game NFTs. Each game is p
 
 ### Arbitrum Sepolia (Chain ID: 421614)
 
-- **Diamond Contract:** `0x1B58c30316578e76604C4aF39748a223e149DED8`
-- **Explorer:** https://sepolia.arbiscan.io/address/0x1B58c30316578e76604C4aF39748a223e149DED8
+- **Diamond Contract:** `0x56d1349D9903498450f63182dDa7b8D7D360f06F`
+- **Explorer:** https://sepolia.arbiscan.io/address/0x56d1349D9903498450f63182dDa7b8D7D360f06F
 
 ## Installation
 
