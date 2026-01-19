@@ -48,7 +48,7 @@ const DIAMOND_ABI = [
 
 function getDeployedAddress(
   chainId: number,
-  moduleName: string = "ChainCraft"
+  moduleName: string = "CCGR"
 ): string {
   try {
     const deploymentPath = path.join(
@@ -82,7 +82,7 @@ function getDeployedAddress(
       throw new Error(
         `Contract "${contractKey}" not found in deployment file for chain ${chainId}.\n` +
           `Available contracts:\n${availableContracts || "  (none found)"}\n` +
-          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "ChainCraft" or "ChainCraftDev")`
+          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "CCGR" or "CCGRDev")`
       );
     }
 
@@ -96,8 +96,8 @@ function getDeployedAddress(
 async function main() {
   console.log("📋 Listing operators for CCGRDiamond contract...");
 
-  // Get contract module name (defaults to "ChainCraft" for backward compatibility)
-  const contractModule = process.env.CONTRACT_MODULE || "ChainCraft";
+  // Get contract module name (defaults to "CCGR" for backward compatibility)
+  const contractModule = process.env.CONTRACT_MODULE || "CCGR";
   console.log(`📦 Using contract module: ${contractModule}`);
 
   // Get network configuration

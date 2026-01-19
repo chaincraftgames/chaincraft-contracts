@@ -22,7 +22,7 @@ function getFunctionSelectors(abi: any[]): string[] {
     });
 }
 
-export default buildModule("ChainCraft", (m) => {
+export default buildModule("CCGRDev", (m) => {
   // ============ Deploy Diamond ============
   const diamond = m.contract("CCGRDiamond", [], {
     id: "CCGRDiamond",

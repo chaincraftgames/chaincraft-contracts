@@ -44,7 +44,7 @@ const OPERABLE_FACET_ABI = [
 
 function getDeployedAddress(
   chainId: number,
-  moduleName: string = "ChainCraft"
+  moduleName: string = "CCGR"
 ): string {
   try {
     const deploymentPath = path.join(
@@ -78,7 +78,7 @@ function getDeployedAddress(
       throw new Error(
         `Contract "${contractKey}" not found in deployment file for chain ${chainId}.\n` +
           `Available contracts:\n${availableContracts || "  (none found)"}\n` +
-          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "ChainCraft" or "ChainCraftDev")`
+          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "CCGR" or "CCGRDev")`
       );
     }
 
@@ -101,7 +101,7 @@ async function main() {
       "Usage: export OPERATOR_ADDR=0x... && pnpm hardhat run scripts/remove-operator.ts --network <network>"
     );
     console.log(
-      "Optional: export CONTRACT_MODULE=ChainCraftDev to use a different contract module"
+      "Optional: export CONTRACT_MODULE=CCGRDev to use a different contract module"
     );
     process.exit(1);
   }
@@ -111,8 +111,8 @@ async function main() {
     process.exit(1);
   }
 
-  // Get contract module name (defaults to "ChainCraft" for backward compatibility)
-  const contractModule = process.env.CONTRACT_MODULE || "ChainCraft";
+  // Get contract module name (defaults to "CCGR" for backward compatibility)
+  const contractModule = process.env.CONTRACT_MODULE || "CCGR";
   console.log(`📦 Using contract module: ${contractModule}`);
 
   // Get network configuration
