@@ -41,8 +41,27 @@ contract TokenDuelsFacet is ITokenDuelsFacet, TokenDuelsInternal, OperableIntern
         _createGame(sessionId, gameId);
     }
 
+    function createGameWithSignature(
+        uint256 sessionId,
+        uint256 gameId,
+        address userAddress,
+        uint256 deadline,
+        bytes memory signature
+    ) external {
+        _createGameWithSignature(sessionId, gameId, userAddress, deadline, signature);
+    }
+
     function joinGame(uint256 sessionId) external {
         _joinGame(sessionId);
+    }
+
+    function joinGameWithSignature(
+        uint256 sessionId,
+        address userAddress,
+        uint256 deadline,
+        bytes memory signature
+    ) external {
+        _joinGameWithSignature(sessionId, userAddress, deadline, signature);
     }
 
     function settleGame(uint256 sessionId, address winner) external onlyOwnerOrOperator {

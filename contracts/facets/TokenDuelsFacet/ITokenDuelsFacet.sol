@@ -45,7 +45,22 @@ interface ITokenDuelsFacet {
 
     function createGame(uint256 sessionId, uint256 gameId) external;
 
+    function createGameWithSignature(
+        uint256 sessionId,
+        uint256 gameId,
+        address userAddress,
+        uint256 deadline,
+        bytes memory signature
+    ) external;
+
     function joinGame(uint256 sessionId) external;
+
+    function joinGameWithSignature(
+        uint256 sessionId,
+        address userAddress,
+        uint256 deadline,
+        bytes memory signature
+    ) external;
 
     function settleGame(uint256 sessionId, address winner) external;
 

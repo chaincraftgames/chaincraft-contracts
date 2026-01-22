@@ -5,10 +5,11 @@ import { ReentrancyGuard } from "solady/src/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/src/utils/SafeTransferLib.sol";
 import { TokenDuelsStorage } from "./TokenDuelsStorage.sol";
 import { ITokenDuelsFacet } from "./ITokenDuelsFacet.sol";
+import { EIP712Internal } from "../EIP712Facet/EIP712Internal.sol";
 
 /// @title TokenDuelsInternal
 /// @dev Internal logic for Token Duels (ERC20 token, fixed stake)
-abstract contract TokenDuelsInternal is ITokenDuelsFacet, ReentrancyGuard {
+abstract contract TokenDuelsInternal is ITokenDuelsFacet, ReentrancyGuard, EIP712Internal {
     // ============ Constants ============
 
     uint256 internal constant STAKE_TOKEN_COUNT = 10; // Base token count (multiplied by 10**decimals)
@@ -112,6 +113,68 @@ abstract contract TokenDuelsInternal is ITokenDuelsFacet, ReentrancyGuard {
         emit GameCreated(sessionId, gameId, msg.sender, stakeAmount);
     }
 
+    /// @notice Create a game using a meta-transaction (gasless)
+    /// @param sessionId The session ID
+    /// @param gameId The game ID from GameRegistry
+    /// @param userAddress The address of the user creating the game
+    /// @param deadline Signature expiration timestamp
+    /// @param signature EIP-712 signature from the user
+    function _createGameWithSignature(
+        uint256 sessionId,
+        uint256 gameId,
+        address userAddress,
+        uint256 deadline,
+        bytes memory signature
+    ) internal nonReentrant {
+        if (sessionId == 0) revert TokenDuels__InvalidGameId();
+        if (gameId == 0) revert TokenDuels__InvalidGameId();
+        if (userAddress == address(0)) revert TokenDuels__ZeroAddress();
+        _requireTokenSet();
+
+        TokenDuelsStorage.Layout storage ds = TokenDuelsStorage.layout();
+        
+        // Check if sessionId already exists
+        if (ds.games[sessionId].p1 != address(0)) {
+            revert TokenDuels__SessionIdExists();
+        }
+
+        // Build the struct hash for EIP-712
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("CreateGame(uint256 sessionId,uint256 gameId,uint256 deadline)"),
+                sessionId,
+                gameId,
+                deadline
+            )
+        );
+
+        // Verify signature and recover signer
+        address signer = _verifySignatureAndRecover(structHash, deadline, signature);
+
+        // Ensure the signer matches the userAddress
+        if (signer != userAddress) {
+            revert TokenDuels__InvalidGameId(); // Reuse error for invalid signer
+        }
+
+        uint256 stakeAmount = _getStakeAmount();
+        address betToken = ds.betToken;
+
+        // Transfer tokens from user to contract (not from msg.sender)
+        SafeTransferLib.safeTransferFrom(betToken, userAddress, address(this), stakeAmount);
+
+        TokenDuelsStorage.Game storage game = ds.games[sessionId];
+        game.p1 = userAddress;
+        game.p2 = address(0);
+        game.stakeAmount = stakeAmount;
+        game.p1Deposit = stakeAmount;
+        game.p2Deposit = 0;
+        game.state = 1; // WAITING_FOR_P2
+        game.winner = address(0);
+        game.gameId = gameId;
+
+        emit GameCreated(sessionId, gameId, userAddress, stakeAmount);
+    }
+
     function _joinGame(uint256 sessionId) internal nonReentrant {
         _requireTokenSet();
 
@@ -134,6 +197,58 @@ abstract contract TokenDuelsInternal is ITokenDuelsFacet, ReentrancyGuard {
         game.state = 2; // ACTIVE
 
         emit GameJoined(sessionId, msg.sender);
+    }
+
+    /// @notice Join a game using a meta-transaction (gasless)
+    /// @param sessionId The session ID
+    /// @param userAddress The address of the user joining the game
+    /// @param deadline Signature expiration timestamp
+    /// @param signature EIP-712 signature from the user
+    function _joinGameWithSignature(
+        uint256 sessionId,
+        address userAddress,
+        uint256 deadline,
+        bytes memory signature
+    ) internal nonReentrant {
+        _requireTokenSet();
+
+        TokenDuelsStorage.Game storage game = _getGame(sessionId);
+        TokenDuelsStorage.Layout storage ds = TokenDuelsStorage.layout();
+
+        if (game.state != 1) revert TokenDuels__WrongState(); // WAITING_FOR_P2
+        if (game.p2 != address(0)) revert TokenDuels__AlreadyJoined();
+        if (userAddress == address(0)) revert TokenDuels__ZeroAddress();
+        if (userAddress == game.p1) revert TokenDuels__CannotJoinSelf();
+
+        // Build the struct hash for EIP-712
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("JoinGame(uint256 sessionId,uint256 deadline)"),
+                sessionId,
+                deadline
+            )
+        );
+
+        // Verify signature and recover signer
+        address signer = _verifySignatureAndRecover(structHash, deadline, signature);
+
+        // Ensure the signer matches the userAddress
+        if (signer != userAddress) {
+            revert TokenDuels__InvalidGameId(); // Reuse error for invalid signer
+        }
+
+        uint256 stakeAmount = game.stakeAmount;
+        address betToken = ds.betToken;
+
+        // Transfer tokens from user to contract (not from msg.sender)
+        SafeTransferLib.safeTransferFrom(betToken, userAddress, address(this), stakeAmount);
+
+        game.p2 = userAddress;
+        game.p2Deposit = stakeAmount;
+
+        game.state = 2; // ACTIVE
+
+        emit GameJoined(sessionId, userAddress);
     }
 
     function _settleGame(uint256 sessionId, address winner) internal nonReentrant {

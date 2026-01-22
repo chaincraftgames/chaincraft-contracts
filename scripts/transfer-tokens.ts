@@ -93,16 +93,24 @@ async function main() {
     process.exit(1);
   }
 
-  // Get contract module name (defaults to "ERC20" for backward compatibility)
-  const contractModule = process.env.CONTRACT_MODULE || "ERC20";
-  console.log(`📦 Using contract module: ${contractModule}`);
-
   // Get network configuration
   const { chain, chainId, rpcUrl } = getNetworkConfig(hre);
 
   try {
-    // Get deployed token address for the chain
-    const tokenAddress = getDeployedTokenAddress(chainId, contractModule);
+    // Get token address from environment variable or deployment file
+    let tokenAddress: string;
+    const tokenAddressFromEnv = process.env.TOKEN_ADDR;
+    const contractModule = process.env.CONTRACT_MODULE || "ERC20";
+
+    if (tokenAddressFromEnv) {
+      tokenAddress = tokenAddressFromEnv;
+      console.log(`🪙 Using token address from TOKEN_ADDR: ${tokenAddress}`);
+    } else {
+      tokenAddress = getDeployedTokenAddress(chainId, contractModule);
+      console.log(`📦 Using contract module: ${contractModule}`);
+      console.log(`🪙 Using token address from deployment: ${tokenAddress}`);
+    }
+
     console.log(`📋 Token Address: ${tokenAddress}`);
     console.log(`🔗 Chain: ${chain.name} (${chain.id})`);
 
