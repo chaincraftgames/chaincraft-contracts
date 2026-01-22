@@ -91,7 +91,7 @@ export default buildModule("CCTD", (m) => {
           selectors: tokenDuelsFacetSelectorsFiltered,
         },
       ],
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x0000000000000000000000000000000000000000",
       "0x",
     ],
     { id: "DiamondCut" }
