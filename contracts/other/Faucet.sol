@@ -12,24 +12,40 @@ contract TokenFaucet is Ownable {
     address public immutable token;
 
     mapping(address => uint256) public lastClaimTime;
+    mapping(address => bool) public operators;
 
     event Claimed(address indexed user, uint256 amount);
     event Deposited(address indexed depositor, uint256 amount);
     event ClaimAmountUpdated(uint256 newAmount);
     event CooldownUpdated(uint256 newCooldown);
+    event OperatorAdded(address indexed operator);
+    event OperatorRemoved(address indexed operator);
 
     error ClaimTooSoon();
     error InsufficientBalance();
+    error ZeroAddress();
+    error AlreadyOperator();
+    error NotOperator();
+
+    modifier onlyOperator() {
+        if (!operators[msg.sender] && msg.sender != owner()) {
+            revert NotOperator();
+        }
+        _;
+    }
 
     constructor(address _token) {
         token = _token;
         _initializeOwner(msg.sender);
     }
 
-    function claim() external {
-        address user = msg.sender;
+    /// @notice Operator can claim tokens for a recipient address
+    /// @dev Only callable by operators, checks cooldown on recipient address
+    /// @param recipient Address to receive the tokens
+    function claim(address recipient) external onlyOperator {
+        if (recipient == address(0)) revert ZeroAddress();
         
-        if (block.timestamp < lastClaimTime[user] + claimCooldown) {
+        if (block.timestamp < lastClaimTime[recipient] + claimCooldown) {
             revert ClaimTooSoon();
         }
 
@@ -38,10 +54,10 @@ contract TokenFaucet is Ownable {
             revert InsufficientBalance();
         }
 
-        lastClaimTime[user] = block.timestamp;
-        token.safeTransfer(user, claimAmount);
+        lastClaimTime[recipient] = block.timestamp;
+        token.safeTransfer(recipient, claimAmount);
 
-        emit Claimed(user, claimAmount);
+        emit Claimed(recipient, claimAmount);
     }
 
     function deposit(uint256 amount) external {
@@ -64,6 +80,34 @@ contract TokenFaucet is Ownable {
     /// @dev Owner can withdraw tokens
     function withdraw(uint256 amount) external onlyOwner {
         token.safeTransfer(msg.sender, amount);
+    }
+
+    // ============ Operator Management ============
+
+    /// @notice Add a new operator
+    /// @dev Only callable by the contract owner
+    /// @param operator Address to be added as an operator
+    function addOperator(address operator) external onlyOwner {
+        if (operator == address(0)) revert ZeroAddress();
+        if (operators[operator]) revert AlreadyOperator();
+        operators[operator] = true;
+        emit OperatorAdded(operator);
+    }
+
+    /// @notice Remove an existing operator
+    /// @dev Only callable by the contract owner
+    /// @param operator Address to be removed from operators
+    function removeOperator(address operator) external onlyOwner {
+        if (!operators[operator]) revert NotOperator();
+        operators[operator] = false;
+        emit OperatorRemoved(operator);
+    }
+
+    /// @notice Check if an address is an operator
+    /// @param operator Address to check
+    /// @return bool True if the address is an operator, false otherwise
+    function isOperator(address operator) external view returns (bool) {
+        return operators[operator];
     }
 
     function timeUntilNextClaim(address user) external view returns (uint256) {

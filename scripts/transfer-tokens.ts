@@ -114,11 +114,12 @@ async function main() {
     console.log(`📋 Token Address: ${tokenAddress}`);
     console.log(`🔗 Chain: ${chain.name} (${chain.id})`);
 
-    // Recipient addresses
-    const recipients = [
-      "0xe280ceccb23a6ebd420bb5A60f86596403e1D13C",
-      "0x085a18376E26A1b90b9c51b4f51dd5485D843616",
-    ];
+    // Recipient addresses from environment variable (comma-separated)
+    const recipientsEnv = process.env.RECIPIENT_ADDRESSES;
+    if (!recipientsEnv) {
+      throw new Error("RECIPIENT_ADDRESSES environment variable is required (comma-separated addresses)");
+    }
+    const recipients = recipientsEnv.split(",").map((addr) => addr.trim());
 
     // Amount to transfer: 1000 tokens (with 18 decimals)
     const amount = BigInt("1000000000000000000000"); // 1000 * 10^18
