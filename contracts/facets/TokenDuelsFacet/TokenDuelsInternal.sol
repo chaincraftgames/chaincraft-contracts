@@ -18,6 +18,7 @@ abstract contract TokenDuelsInternal is ITokenDuelsFacet, ReentrancyGuard, EIP71
 
     error TokenDuels__InvalidStake();
     error TokenDuels__InvalidGameId();
+    error TokenDuels__InvalidSessionId();
     error TokenDuels__WrongState();
     error TokenDuels__AlreadyJoined();
     error TokenDuels__CannotJoinSelf();
@@ -28,6 +29,7 @@ abstract contract TokenDuelsInternal is ITokenDuelsFacet, ReentrancyGuard, EIP71
     error TokenDuels__SessionIdExists();
 
     function _getGame(uint256 sessionId) internal view returns (TokenDuelsStorage.Game storage game) {
+        if (sessionId == 0) revert TokenDuels__InvalidSessionId();
         game = TokenDuelsStorage.layout().games[sessionId];
         if (game.p1 == address(0)) revert TokenDuels__InvalidGameId();
     }
@@ -83,7 +85,7 @@ abstract contract TokenDuelsInternal is ITokenDuelsFacet, ReentrancyGuard, EIP71
     // ============ Internal Core ============
 
     function _createGame(uint256 sessionId, uint256 gameId) internal nonReentrant {
-        if (sessionId == 0) revert TokenDuels__InvalidGameId();
+        if (sessionId == 0) revert TokenDuels__InvalidSessionId();
         if (gameId == 0) revert TokenDuels__InvalidGameId(); // GameRegistry tokenId must be provided
         _requireTokenSet();
 
@@ -126,7 +128,7 @@ abstract contract TokenDuelsInternal is ITokenDuelsFacet, ReentrancyGuard, EIP71
         uint256 deadline,
         bytes memory signature
     ) internal nonReentrant {
-        if (sessionId == 0) revert TokenDuels__InvalidGameId();
+        if (sessionId == 0) revert TokenDuels__InvalidSessionId();
         if (gameId == 0) revert TokenDuels__InvalidGameId();
         if (userAddress == address(0)) revert TokenDuels__ZeroAddress();
         _requireTokenSet();
