@@ -17,30 +17,13 @@ import path from "path";
 
 const require = createRequire(import.meta.url);
 
-// ERC20 ABI (minimal - just transfer function)
-const ERC20_ABI = [
-  {
-    type: "function",
-    name: "transfer",
-    inputs: [
-      { name: "to", type: "address", internalType: "address" },
-      { name: "amount", type: "uint256", internalType: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool", internalType: "bool" }],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "balanceOf",
-    inputs: [{ name: "account", type: "address", internalType: "address" }],
-    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
-    stateMutability: "view",
-  },
-] as const;
+// Load ERC20 ABI from compiled artifacts
+const ERC20_ABI =
+  require("../artifacts/contracts/other/ERC20.sol/ChainCraftToken.json").abi;
 
 function getDeployedTokenAddress(
   chainId: number,
-  moduleName: string = "ERC20"
+  moduleName: string = "ERC20",
 ): string {
   try {
     const deploymentPath = path.join(
@@ -48,17 +31,17 @@ function getDeployedTokenAddress(
       "ignition",
       "deployments",
       `chain-${chainId}`,
-      "deployed_addresses.json"
+      "deployed_addresses.json",
     );
 
     if (!fs.existsSync(deploymentPath)) {
       throw new Error(
-        `No deployment found for chain ${chainId}. Please deploy the contract first.`
+        `No deployment found for chain ${chainId}. Please deploy the contract first.`,
       );
     }
 
     const deployedAddresses = JSON.parse(
-      fs.readFileSync(deploymentPath, "utf-8")
+      fs.readFileSync(deploymentPath, "utf-8"),
     );
 
     const contractKey = `${moduleName}#ChainCraftToken`;
@@ -74,7 +57,7 @@ function getDeployedTokenAddress(
       throw new Error(
         `Contract "${contractKey}" not found in deployment file for chain ${chainId}.\n` +
           `Available contracts:\n${availableContracts || "  (none found)"}\n` +
-          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "ERC20" or "ERC20Dev")`
+          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "ERC20" or "ERC20Dev")`,
       );
     }
 
@@ -117,7 +100,9 @@ async function main() {
     // Recipient addresses from environment variable (comma-separated)
     const recipientsEnv = process.env.RECIPIENT_ADDRESSES;
     if (!recipientsEnv) {
-      throw new Error("RECIPIENT_ADDRESSES environment variable is required (comma-separated addresses)");
+      throw new Error(
+        "RECIPIENT_ADDRESSES environment variable is required (comma-separated addresses)",
+      );
     }
     const recipients = recipientsEnv.split(",").map((addr) => addr.trim());
 
@@ -126,7 +111,7 @@ async function main() {
 
     // Create account from private key
     const account = privateKeyToAccount(
-      process.env.PRIVATE_KEY as `0x${string}`
+      process.env.PRIVATE_KEY as `0x${string}`,
     );
     console.log(`👤 Sender: ${account.address}`);
 
@@ -155,7 +140,7 @@ async function main() {
 
     if (senderBalance < amount * BigInt(recipients.length)) {
       console.error(
-        `❌ Error: Insufficient balance. Need ${(amount * BigInt(recipients.length)).toString()}, have ${senderBalance.toString()}`
+        `❌ Error: Insufficient balance. Need ${(amount * BigInt(recipients.length)).toString()}, have ${senderBalance.toString()}`,
       );
       process.exit(1);
     }
@@ -186,7 +171,7 @@ async function main() {
           console.log(`🔗 Explorer: https://sepolia.arbiscan.io/tx/${tx}`);
         } else if (chainId === sankoTestnet.id) {
           console.log(
-            `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`
+            `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`,
           );
         }
 
@@ -195,7 +180,7 @@ async function main() {
           recipient as `0x${string}`,
         ]);
         console.log(
-          `✅ Verification: Recipient balance is now ${recipientBalance.toString()} tokens`
+          `✅ Verification: Recipient balance is now ${recipientBalance.toString()} tokens`,
         );
       } else {
         console.error(`❌ Transaction failed for ${recipient}!`);

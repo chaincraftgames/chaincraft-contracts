@@ -17,34 +17,13 @@ import path from "path";
 
 const require = createRequire(import.meta.url);
 
-// OperableFacet ABI
-const OPERABLE_FACET_ABI = [
-  {
-    type: "function",
-    name: "addOperator",
-    inputs: [{ name: "operator", type: "address", internalType: "address" }],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "isOperator",
-    inputs: [{ name: "operator", type: "address", internalType: "address" }],
-    outputs: [{ name: "", type: "bool", internalType: "bool" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "getOperators",
-    inputs: [],
-    outputs: [{ name: "", type: "address[]", internalType: "address[]" }],
-    stateMutability: "view",
-  },
-] as const;
+// Load OperableFacet ABI from compiled artifacts
+const OPERABLE_FACET_ABI =
+  require("../artifacts/contracts/facets/OperableFacet/OperableFacet.sol/OperableFacet.json").abi;
 
 function getDeployedAddress(
   chainId: number,
-  moduleName: string = "CCTD"
+  moduleName: string = "CCTD",
 ): string {
   try {
     const deploymentPath = path.join(
@@ -52,17 +31,17 @@ function getDeployedAddress(
       "ignition",
       "deployments",
       `chain-${chainId}`,
-      "deployed_addresses.json"
+      "deployed_addresses.json",
     );
 
     if (!fs.existsSync(deploymentPath)) {
       throw new Error(
-        `No deployment found for chain ${chainId}. Please deploy the contract first.`
+        `No deployment found for chain ${chainId}. Please deploy the contract first.`,
       );
     }
 
     const deployedAddresses = JSON.parse(
-      fs.readFileSync(deploymentPath, "utf-8")
+      fs.readFileSync(deploymentPath, "utf-8"),
     );
 
     const contractKey = `${moduleName}#CCTDDiamond`;
@@ -78,7 +57,7 @@ function getDeployedAddress(
       throw new Error(
         `Contract "${contractKey}" not found in deployment file for chain ${chainId}.\n` +
           `Available contracts:\n${availableContracts || "  (none found)"}\n` +
-          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "CCTD" or "CCTDDev")`
+          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "CCTD" or "CCTDDev")`,
       );
     }
 
@@ -98,10 +77,10 @@ async function main() {
   if (!operatorAddress) {
     console.error("❌ Error: Operator address is required");
     console.log(
-      "Usage: export OPERATOR_ADDR=0x... && pnpm hardhat run scripts/add-operator-cctd.ts --network <network>"
+      "Usage: export OPERATOR_ADDR=0x... && pnpm hardhat run scripts/add-operator-cctd.ts --network <network>",
     );
     console.log(
-      "Optional: export CONTRACT_MODULE=CCTDDev to use a different contract module"
+      "Optional: export CONTRACT_MODULE=CCTDDev to use a different contract module",
     );
     process.exit(1);
   }
@@ -127,7 +106,7 @@ async function main() {
 
     // Create account from private key
     const account = privateKeyToAccount(
-      process.env.PRIVATE_KEY as `0x${string}`
+      process.env.PRIVATE_KEY as `0x${string}`,
     );
     console.log(`👤 Deployer: ${account.address}`);
 
@@ -181,7 +160,7 @@ async function main() {
         console.log(`🔗 Explorer: https://sepolia.arbiscan.io/tx/${tx}`);
       } else if (chainId === sankoTestnet.id) {
         console.log(
-          `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`
+          `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`,
         );
       }
 

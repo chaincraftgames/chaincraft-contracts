@@ -17,37 +17,13 @@ import path from "path";
 
 const require = createRequire(import.meta.url);
 
-// TokenDuelsFacet ABI
-const TOKEN_DUELS_FACET_ABI = [
-  {
-    type: "function",
-    name: "configureToken",
-    inputs: [{ name: "token", type: "address", internalType: "address" }],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "configuredToken",
-    inputs: [],
-    outputs: [
-      { name: "token", type: "address", internalType: "address" },
-      { name: "decimals", type: "uint8", internalType: "uint8" },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "stakeAmount",
-    inputs: [],
-    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
-    stateMutability: "view",
-  },
-] as const;
+// Load TokenDuelsFacet ABI from compiled artifacts
+const TOKEN_DUELS_FACET_ABI =
+  require("../artifacts/contracts/facets/TokenDuelsFacet/TokenDuelsFacet.sol/TokenDuelsFacet.json").abi;
 
 function getDeployedAddress(
   chainId: number,
-  moduleName: string = "CCTD"
+  moduleName: string = "CCTD",
 ): string {
   try {
     const deploymentPath = path.join(
@@ -55,17 +31,17 @@ function getDeployedAddress(
       "ignition",
       "deployments",
       `chain-${chainId}`,
-      "deployed_addresses.json"
+      "deployed_addresses.json",
     );
 
     if (!fs.existsSync(deploymentPath)) {
       throw new Error(
-        `No deployment found for chain ${chainId}. Please deploy the contract first.`
+        `No deployment found for chain ${chainId}. Please deploy the contract first.`,
       );
     }
 
     const deployedAddresses = JSON.parse(
-      fs.readFileSync(deploymentPath, "utf-8")
+      fs.readFileSync(deploymentPath, "utf-8"),
     );
 
     const contractKey = `${moduleName}#CCTDDiamond`;
@@ -81,7 +57,7 @@ function getDeployedAddress(
       throw new Error(
         `Contract "${contractKey}" not found in deployment file for chain ${chainId}.\n` +
           `Available contracts:\n${availableContracts || "  (none found)"}\n` +
-          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "CCTD" or "CCTDDev")`
+          `Use CONTRACT_MODULE environment variable to specify the module name (e.g., "CCTD" or "CCTDDev")`,
       );
     }
 
@@ -94,7 +70,7 @@ function getDeployedAddress(
 
 function getDeployedTokenAddress(
   chainId: number,
-  moduleName: string = "ERC20"
+  moduleName: string = "ERC20",
 ): string {
   try {
     const deploymentPath = path.join(
@@ -102,17 +78,17 @@ function getDeployedTokenAddress(
       "ignition",
       "deployments",
       `chain-${chainId}`,
-      "deployed_addresses.json"
+      "deployed_addresses.json",
     );
 
     if (!fs.existsSync(deploymentPath)) {
       throw new Error(
-        `No deployment found for chain ${chainId}. Please deploy the contract first.`
+        `No deployment found for chain ${chainId}. Please deploy the contract first.`,
       );
     }
 
     const deployedAddresses = JSON.parse(
-      fs.readFileSync(deploymentPath, "utf-8")
+      fs.readFileSync(deploymentPath, "utf-8"),
     );
 
     const contractKey = `${moduleName}#ChainCraftToken`;
@@ -128,7 +104,7 @@ function getDeployedTokenAddress(
       throw new Error(
         `Token "${contractKey}" not found in deployment file for chain ${chainId}.\n` +
           `Available tokens:\n${availableContracts || "  (none found)"}\n` +
-          `Use TOKEN_MODULE environment variable to specify the token module name (e.g., "ERC20" or "ERC20Dev")`
+          `Use TOKEN_MODULE environment variable to specify the token module name (e.g., "ERC20" or "ERC20Dev")`,
       );
     }
 
@@ -173,13 +149,13 @@ async function main() {
     } else {
       tokenAddress = getDeployedTokenAddress(chainId, tokenModule);
       console.log(
-        `🪙 Using token address from deployment (${tokenModule}): ${tokenAddress}`
+        `🪙 Using token address from deployment (${tokenModule}): ${tokenAddress}`,
       );
     }
 
     // Create account from private key
     const account = privateKeyToAccount(
-      process.env.PRIVATE_KEY as `0x${string}`
+      process.env.PRIVATE_KEY as `0x${string}`,
     );
     console.log(`👤 Configurer: ${account.address}`);
 
@@ -205,13 +181,14 @@ async function main() {
     // Check current configuration
     console.log("🔍 Checking current configuration...");
     try {
-      const [currentToken, currentDecimals] = await contract.read.configuredToken();
+      const [currentToken, currentDecimals] =
+        await contract.read.configuredToken();
       if (currentToken !== "0x0000000000000000000000000000000000000000") {
         console.log(
-          `⚠️  Token already configured: ${currentToken} (${currentDecimals} decimals)`
+          `⚠️  Token already configured: ${currentToken} (${currentDecimals} decimals)`,
         );
         console.log(
-          "   If you want to reconfigure, this will overwrite the existing configuration."
+          "   If you want to reconfigure, this will overwrite the existing configuration.",
         );
       }
     } catch (error) {
@@ -240,7 +217,7 @@ async function main() {
         console.log(`🔗 Explorer: https://sepolia.arbiscan.io/tx/${tx}`);
       } else if (chainId === sankoTestnet.id) {
         console.log(
-          `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`
+          `🔗 Explorer: https://sanko-arb-sepolia.calderaexplorer.xyz/tx/${tx}`,
         );
       }
 

@@ -1,3 +1,4 @@
+import { createRequire } from "module";
 import {
   createPublicClient,
   createWalletClient,
@@ -8,47 +9,19 @@ import { privateKeyToAccount } from "viem/accounts";
 import { arbitrumSepolia, getNetworkConfig } from "../utils/chains.js";
 import hre from "hardhat";
 
-const ERC20_ABI = [
-  {
-    type: "function",
-    name: "approve",
-    inputs: [
-      { name: "spender", type: "address", internalType: "address" },
-      { name: "amount", type: "uint256", internalType: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool", internalType: "bool" }],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "balanceOf",
-    inputs: [{ name: "account", type: "address", internalType: "address" }],
-    outputs: [{ name: "", type: "uint256", internalType: "uint256" }],
-    stateMutability: "view",
-  },
-] as const;
+const require = createRequire(import.meta.url);
 
-const FAUCET_ABI = [
-  {
-    type: "function",
-    name: "deposit",
-    inputs: [{ name: "amount", type: "uint256", internalType: "uint256" }],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "token",
-    inputs: [],
-    outputs: [{ name: "", type: "address", internalType: "address" }],
-    stateMutability: "view",
-  },
-] as const;
+// Load ABIs from compiled artifacts
+const ERC20_ABI =
+  require("../artifacts/contracts/other/ERC20.sol/ChainCraftToken.json").abi;
+
+const FAUCET_ABI =
+  require("../artifacts/contracts/other/Faucet.sol/TokenFaucet.json").abi;
 
 async function main() {
   const faucetAddress = process.env.FAUCET_ADDRESS;
   const amount = process.env.AMOUNT || "1000000000000000000000"; // Default: 1000 tokens (1000 * 10^18)
-  
+
   if (!faucetAddress) {
     throw new Error("FAUCET_ADDRESS environment variable is required");
   }
@@ -93,11 +66,20 @@ async function main() {
   });
 
   const balance = await tokenContract.read.balanceOf([account.address]);
-  console.log(`📊 Your Token Balance: ${balance.toString()} wei (${Number(balance) / 1e18} tokens)`);
+  console.log(
+    `📊 Your Token Balance: ${balance.toString()} wei (${Number(balance) / 1e18} tokens)`,
+  );
 
   if (BigInt(balance) < BigInt(amount)) {
-    throw new Error(`Insufficient balance. You have ${Number(balance) / 1e18} tokens but need ${Number(amount) / 1e18} tokens`);
+    throw new Error(
+      `Insufficient balance. You have ${Number(balance) / 1e18} tokens but need ${Number(amount) / 1e18} tokens`,
+    );
   }
+
+  // Get current nonce
+  const currentNonce = await publicClient.getTransactionCount({
+    address: account.address,
+  });
 
   // Approve faucet to spend tokens
   console.log("\n1️⃣ Approving faucet to spend tokens...");
@@ -106,28 +88,38 @@ async function main() {
     abi: ERC20_ABI,
     functionName: "approve",
     args: [faucetAddress as `0x${string}`, BigInt(amount)],
+    nonce: currentNonce,
   });
 
   console.log(`   Transaction: ${approveHash}`);
-  await publicClient.waitForTransactionReceipt({ hash: approveHash });
+  const approveReceipt = await publicClient.waitForTransactionReceipt({
+    hash: approveHash,
+  });
   console.log("   ✅ Approved\n");
 
-  // Deposit to faucet
+  // Deposit to faucet (use nonce + 1 explicitly)
   console.log("2️⃣ Depositing tokens to faucet...");
   const depositHash = await walletClient.writeContract({
     address: faucetAddress as `0x${string}`,
     abi: FAUCET_ABI,
     functionName: "deposit",
     args: [BigInt(amount)],
+    nonce: currentNonce + 1,
   });
 
   console.log(`   Transaction: ${depositHash}`);
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: depositHash });
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: depositHash,
+  });
   console.log("   ✅ Deposited\n");
 
   // Check faucet balance
-  const faucetBalance = await tokenContract.read.balanceOf([faucetAddress as `0x${string}`]);
-  console.log(`📊 New Faucet Balance: ${faucetBalance.toString()} wei (${Number(faucetBalance) / 1e18} tokens)`);
+  const faucetBalance = await tokenContract.read.balanceOf([
+    faucetAddress as `0x${string}`,
+  ]);
+  console.log(
+    `📊 New Faucet Balance: ${faucetBalance.toString()} wei (${Number(faucetBalance) / 1e18} tokens)`,
+  );
 }
 
 main()
