@@ -14,13 +14,23 @@ Diamond proxy-based smart contract system for managing game NFTs. Each game is p
 - ✅ **EIP-712 Signatures** - User consent required for game publishing
 - ✅ **Operator System** - Delegate publishing rights to trusted addresses
 - ✅ **EIP-7201 Storage** - Namespaced storage prevents collisions
+- ✅ **Token Duels** - PvP token wagering system with EIP-712 signatures
+- ✅ **Gasless Transactions** - EIP-2771 meta-transactions support
+- ✅ **Faucet System** - Token faucet for testnet gameplay
 
 ## Deployments
 
 ### Arbitrum Sepolia (Chain ID: 421614)
 
-- **Diamond Contract:** `0x56d1349D9903498450f63182dDa7b8D7D360f06F`
+- **CCGR Diamond:** `0x56d1349D9903498450f63182dDa7b8D7D360f06F`
 - **Explorer:** https://sepolia.arbiscan.io/address/0x56d1349D9903498450f63182dDa7b8D7D360f06F
+
+### Token Duels (Chain ID: 421614)
+
+- **CCTD Diamond:** `0xFF4bb838a0f65F49BB576A347A0E7feEA7Fe035c`
+- **Faucet:** `0x3673fd27425cC1292870F6E90CbC3CB3cfb4009b`
+- **ChainCraftToken (ERC20):** `0xe3D55A787EF42b30c5877Bff8f513e60e95D2F7D`
+- **Explorer:** https://sepolia.arbiscan.io/address/0xFF4bb838a0f65F49BB576A347A0E7feEA7Fe035c
 
 ## Installation
 
@@ -51,6 +61,17 @@ CCGRDiamond (EIP-2535 Proxy)
     ├── ERC721 Standard
     ├── UUID Registry
     └── EIP-712 Auth
+
+CCTDDiamond (EIP-2535 Proxy - Token Duels)
+├── OperableFacet        - Manage operators
+└── TokenDuelsFacet      - PvP token wagering
+    ├── Create Sessions
+    ├── Join Sessions
+    ├── Resolve Duels
+    └── EIP-712 Signatures
+
+TokenFaucet
+└── Claim tokens for testnet gameplay
 ```
 
 ### Access Control
@@ -104,25 +125,33 @@ All tests passing: **62/62** ✅
 
 ## Project Structure
 
-```
 contracts/
-├── CCGRDiamond.sol                 # Main diamond proxy
+├── CCGRDiamond.sol                 # Game registry diamond proxy
+├── CCTDDiamond.sol                 # Token duels diamond proxy
+├── other/
+│   ├── ERC20.sol                   # ChainCraft Token
+│   └── Faucet.sol                  # Token faucet
 └── facets/
     ├── ProxyAdminFacet/            # Admin transfer (optional)
     ├── OperableFacet/              # Operator management
     ├── EIP712Facet/                # EIP-712 signature verification
-    └── GameRegistryFacet/          # Game NFT registry
+    ├── GameRegistryFacet/          # Game NFT registry
+    └── TokenDuelsFacet/            # PvP token wagering
 
 test/
 ├── DiamondAccessControl.test.ts    # Diamond security tests
 ├── EIP712Facet.test.ts             # EIP-712 signature tests
 ├── GameRegistryFacet.test.ts       # Game registry tests
-└── ProxyAdminFacet.test.ts         # Admin transfer tests
+├── ProxyAdminFacet.test.ts         # Admin transfer tests
+└── TokenDuelsFacet.test.ts         # Token duels tests
 
 scripts/
 ├── add-operator.ts                 # Add operator
 ├── remove-operator.ts              # Remove operator
 ├── list-operators.ts               # List all operators
 ├── add-proxy-admin-facet.ts        # Add ProxyAdminFacet
-└── remove-proxy-admin-facet.ts     # Remove ProxyAdminFacet
-```
+├── remove-proxy-admin-facet.ts     # Remove ProxyAdminFacet
+├── configure-token-duels.ts        # Configure duels settings
+├── transfer-tokens.ts              # Transfer tokens
+├── deposit-to-faucet.ts            # Deposit to faucet
+└── add-operator-cctd.ts            # Add operator to CCTD
