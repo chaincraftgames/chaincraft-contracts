@@ -32,7 +32,8 @@ abstract contract GameAssetInternal is
         uint256 indexed tokenId, 
         address indexed to, 
         string tokenURI,
-        bool indexed isFreeMint
+        bool indexed isFreeMint,
+        bytes32 sessionId
     );
 
     /// @notice Emitted when a character URI is updated
@@ -66,18 +67,20 @@ abstract contract GameAssetInternal is
         _setSupportsInterface(0x780e9d63, true); // ERC721Enumerable
     }
 
-    /// @notice Mint a new character NFT with EIP-712 signature verification
+    /// @notice Mint a new character NFT with EIP-712 signature verification and optional session tracking
     /// @dev Requires user signature to prove consent. Operator submits the transaction.
     /// @param to Address to mint the character NFT to (must match signer)
     /// @param tokenURI URI containing character metadata (max 1024 characters)
     /// @param deadline Signature expiration timestamp
     /// @param signature EIP-712 signature from the recipient
+    /// @param sessionId Session identifier for tracking (bytes32(0) to skip tracking)
     /// @return tokenId The ID of the newly minted character NFT
     function _mintWithSignature(
         address to,
         string memory tokenURI,
         uint256 deadline,
-        bytes memory signature
+        bytes memory signature,
+        bytes32 sessionId
     ) internal returns (uint256) {
         GameAssetStorage.Layout storage ds = GameAssetStorage.layout();
         
@@ -112,10 +115,16 @@ abstract contract GameAssetInternal is
         // Store token URI
         ds.tokenURIs[tokenId] = tokenURI;
 
+        // Track session mint if sessionId is provided
+        if (sessionId != bytes32(0)) {
+            ds.playerSessionMints[sessionId][to].push(tokenId);
+            ds.tokenSession[tokenId] = sessionId;
+        }
+
         // Mint NFT to recipient
         _mint(to, tokenId);
 
-        emit AssetMinted(tokenId, to, tokenURI, false);
+        emit AssetMinted(tokenId, to, tokenURI, false, sessionId);
         
         return tokenId;
     }
@@ -124,10 +133,12 @@ abstract contract GameAssetInternal is
     /// @dev Only callable by operators/owner. No user signature required.
     /// @param to Address to mint the character NFT to
     /// @param tokenURI URI containing character metadata (max 1024 characters)
+    /// @param sessionId Session identifier for tracking (bytes32(0) to skip tracking)
     /// @return tokenId The ID of the newly minted character NFT
     function _mintTo(
         address to,
-        string memory tokenURI
+        string memory tokenURI,
+        bytes32 sessionId
     ) internal returns (uint256) {
         GameAssetStorage.Layout storage ds = GameAssetStorage.layout();
         
@@ -144,10 +155,16 @@ abstract contract GameAssetInternal is
         // Store token URI
         ds.tokenURIs[tokenId] = tokenURI;
 
+        // Track session mint if sessionId is provided
+        if (sessionId != bytes32(0)) {
+            ds.playerSessionMints[sessionId][to].push(tokenId);
+            ds.tokenSession[tokenId] = sessionId;
+        }
+
         // Mint NFT to recipient
         _mint(to, tokenId);
 
-        emit AssetMinted(tokenId, to, tokenURI, true);
+        emit AssetMinted(tokenId, to, tokenURI, true, sessionId);
         
         return tokenId;
     }

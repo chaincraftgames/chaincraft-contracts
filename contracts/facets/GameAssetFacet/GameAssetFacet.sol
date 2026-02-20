@@ -37,7 +37,18 @@ contract GameAssetFacet is GameAssetInternal, OperableInternal, _Ownable, IGameA
         uint256 deadline,
         bytes memory signature
     ) external onlyOwnerOrOperator returns (uint256) {
-        return _mintWithSignature(to, tokenURI, deadline, signature);
+        return _mintWithSignature(to, tokenURI, deadline, signature, bytes32(0));
+    }
+
+    /// @inheritdoc IGameAssetFacet
+    function mintWithSignatureAndSession(
+        address to,
+        string memory tokenURI,
+        uint256 deadline,
+        bytes memory signature,
+        bytes32 sessionId
+    ) external onlyOwnerOrOperator returns (uint256) {
+        return _mintWithSignature(to, tokenURI, deadline, signature, sessionId);
     }
 
     /// @inheritdoc IGameAssetFacet
@@ -45,7 +56,16 @@ contract GameAssetFacet is GameAssetInternal, OperableInternal, _Ownable, IGameA
         address to,
         string memory tokenURI
     ) external onlyOwnerOrOperator returns (uint256) {
-        return _mintTo(to, tokenURI);
+        return _mintTo(to, tokenURI, bytes32(0));
+    }
+
+    /// @inheritdoc IGameAssetFacet
+    function mintToWithSession(
+        address to,
+        string memory tokenURI,
+        bytes32 sessionId
+    ) external onlyOwnerOrOperator returns (uint256) {
+        return _mintTo(to, tokenURI, sessionId);
     }
 
     /// @inheritdoc IGameAssetFacet
@@ -64,6 +84,21 @@ contract GameAssetFacet is GameAssetInternal, OperableInternal, _Ownable, IGameA
         string memory newURI
     ) external onlyOwnerOrOperator {
         _updateTokenURIByOperator(tokenId, newURI);
+    }
+
+    /// @inheritdoc IGameAssetFacet
+    function getPlayerSessionTokens(
+        address player,
+        bytes32 sessionId
+    ) external view returns (uint256[] memory) {
+        return GameAssetStorage.layout().playerSessionMints[sessionId][player];
+    }
+
+    /// @inheritdoc IGameAssetFacet
+    function getTokenSession(
+        uint256 tokenId
+    ) external view returns (bytes32) {
+        return GameAssetStorage.layout().tokenSession[tokenId];
     }
 
     // ============ ERC721 Standard Functions ============

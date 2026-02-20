@@ -13,6 +13,10 @@ library GameAssetStorage {
     struct Layout {
         uint256 nextTokenId;
         mapping(uint256 => string) tokenURIs;
+        /// @dev sessionId (bytes32) => player address => tokenIds (array)
+        mapping(bytes32 => mapping(address => uint256[])) playerSessionMints;
+        /// @dev tokenId => sessionId (for reverse lookup)
+        mapping(uint256 => bytes32) tokenSession;
     }
 
     // ============ Storage Slot ============
