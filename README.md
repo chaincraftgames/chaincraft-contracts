@@ -1,21 +1,24 @@
 # ChainCraft Contracts
 
-> EIP-2535 Diamond Proxy implementation for on-chain game registry NFTs
+> Smart contracts powering the ChainCraft platform
 
 ## Overview
 
-Diamond proxy-based smart contract system for managing game NFTs. Each game is published as an ERC721 token with a unique UUID, enabling on-chain game metadata management with user consent via EIP-712 signatures.
+Smart contract system with three diamonds:
+- **CCGR** - Game registry for publishing games as ERC721 NFTs with UUID linking
+- **CCTD** - Token duels for PvP wagering
+- **CCGA** - Game assets for minting NFTs with unique URIs
 
 ### Key Features
 
 - ✅ **EIP-2535 Diamond Pattern** - Upgradeable and modular architecture
-- ✅ **ERC721 Game NFTs** - Each game is a unique, transferable NFT
+- ✅ **ERC721 NFTs** - Games and assets as unique, transferable tokens
 - ✅ **UUID Registry** - Link off-chain game IDs to on-chain tokens
-- ✅ **EIP-712 Signatures** - User consent required for game publishing
-- ✅ **Operator System** - Delegate publishing rights to trusted addresses
+- ✅ **EIP-712 Signatures** - User consent required for publishing and wagering
+- ✅ **Operator System** - Delegate actions to trusted addresses
 - ✅ **EIP-7201 Storage** - Namespaced storage prevents collisions
-- ✅ **Token Duels** - PvP token wagering system with EIP-712 signatures
-- ✅ **Gasless Transactions** - EIP-2771 meta-transactions support
+- ✅ **Token Duels** - PvP wagering with EIP-712 signatures
+- ✅ **Game Assets** - Mint NFTs with unique URIs
 - ✅ **Faucet System** - Token faucet for testnet gameplay
 
 ## Deployments
@@ -31,6 +34,11 @@ Diamond proxy-based smart contract system for managing game NFTs. Each game is p
 - **Faucet:** `0x3673fd27425cC1292870F6E90CbC3CB3cfb4009b`
 - **ChainCraftToken (ERC20):** `0xe3D55A787EF42b30c5877Bff8f513e60e95D2F7D`
 - **Explorer:** https://sepolia.arbiscan.io/address/0xFF4bb838a0f65F49BB576A347A0E7feEA7Fe035c
+
+### Game Assets (Chain ID: 421614)
+
+- **CCGA Diamond:** `0x1DA0Cfb097Dd5b4388317f0Fe99d5A60C6385f12`
+- **Explorer:** https://sepolia.arbiscan.io/address/0x1DA0Cfb097Dd5b4388317f0Fe99d5A60C6385f12
 
 ## Installation
 
@@ -70,50 +78,17 @@ CCTDDiamond (EIP-2535 Proxy - Token Duels)
     ├── Resolve Duels
     └── EIP-712 Signatures
 
+CCGADiamond (EIP-2535 Proxy - Game Assets)
+├── OperableFacet        - Manage operators
+├── EIP712Facet          - EIP-712 signature verification
+└── GameAssetFacet       - Mint & manage game asset NFTs
+    ├── ERC721 Standard
+    ├── Unique URIs
+    └── EIP-712 Auth
+
 TokenFaucet
 └── Claim tokens for testnet gameplay
 ```
-
-### Access Control
-
-| Role              | Capabilities                                                                 |
-| ----------------- | ---------------------------------------------------------------------------- |
-| **Proxy Admin**   | `diamondCut()`, `setFallbackAddress()` - Controls diamond structure          |
-| **Owner**         | Initialize facets, add/remove operators                                      |
-| **Operators**     | Publish games (with user signature), update URIs (with or without signature) |
-| **Token Holders** | Transfer NFTs, approve, view metadata                                        |
-
-## Core Concepts
-
-### Diamond Proxy Pattern
-
-Uses [EIP-2535](https://eips.ethereum.org/EIPS/eip-2535) for upgradeability:
-
-- **Facets** - Modular functionality
-- **Diamond Cut** - Add/replace/remove facets
-- **Storage Isolation** - EIP-7201 namespaced storage
-
-### Proxy Admin vs Owner
-
-Two separate roles:
-
-```
-Proxy Admin (ERC-1967)
-  └─ Controls diamond structure (diamondCut)
-  └─ Initially: deployer
-  └─ Transfer: via ProxyAdminFacet (optional)
-
-Owner (ERC-173)
-  └─ Controls business logic (operators, initialization)
-  └─ Initially: deployer
-  └─ Transfer: via transferOwnership/acceptOwnership
-```
-
-**Important:** Transferring owner does NOT transfer proxy admin!
-
-### UUID Registry
-
-Games are identified by UUIDs linking off-chain game IDs to on-chain token IDs.
 
 ## Testing
 
@@ -122,36 +97,3 @@ pnpm hardhat test
 ```
 
 All tests passing: **62/62** ✅
-
-## Project Structure
-
-contracts/
-├── CCGRDiamond.sol                 # Game registry diamond proxy
-├── CCTDDiamond.sol                 # Token duels diamond proxy
-├── other/
-│   ├── ERC20.sol                   # ChainCraft Token
-│   └── Faucet.sol                  # Token faucet
-└── facets/
-    ├── ProxyAdminFacet/            # Admin transfer (optional)
-    ├── OperableFacet/              # Operator management
-    ├── EIP712Facet/                # EIP-712 signature verification
-    ├── GameRegistryFacet/          # Game NFT registry
-    └── TokenDuelsFacet/            # PvP token wagering
-
-test/
-├── DiamondAccessControl.test.ts    # Diamond security tests
-├── EIP712Facet.test.ts             # EIP-712 signature tests
-├── GameRegistryFacet.test.ts       # Game registry tests
-├── ProxyAdminFacet.test.ts         # Admin transfer tests
-└── TokenDuelsFacet.test.ts         # Token duels tests
-
-scripts/
-├── add-operator.ts                 # Add operator
-├── remove-operator.ts              # Remove operator
-├── list-operators.ts               # List all operators
-├── add-proxy-admin-facet.ts        # Add ProxyAdminFacet
-├── remove-proxy-admin-facet.ts     # Remove ProxyAdminFacet
-├── configure-token-duels.ts        # Configure duels settings
-├── transfer-tokens.ts              # Transfer tokens
-├── deposit-to-faucet.ts            # Deposit to faucet
-└── add-operator-cctd.ts            # Add operator to CCTD
